@@ -1,0 +1,9 @@
+# Örnek girdi dosyası / Example input file
+# Bu dosyadaki adresler gerçek değildir. / The addresses below are not real.
+#
+# Kullanım: bu dosyayı input.txt olarak kopyalayın ve gerçek adreslerinizi yazın.
+# Usage: copy this file to input.txt and add your own URLs.
+
+http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+http://demo-panel.example:8080/get.php?username=test&password=test123&type=m3u
+https://demo-stream.example/live/example.m3u8

@@ -1,0 +1,27 @@
+# Local data that may contain credentials
+input.txt
+sonuclar/
+paneller/
+output.txt
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Local playlists
+*.m3u
+*.m3u8
