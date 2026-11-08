@@ -1,0 +1,25 @@
+IPTV CHECKER - ZAYIF
+======================================================================
+Girdi dosyası: input.example.txt
+Adet: 1
+
+ADRESLER
+http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
+
+DETAYLAR
+======================================================================
+[1] ZAYIF (1/5)
+URL: http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
+Kaynak: M3U playlist
+HTTP: 200
+Taranan: ilk 500 satır
+Bulunan yayın: 118
+Kontrol edilen: 5
+Çalışan: 1
+Süre: 11.2 sn
+Yayın kontrolleri:
+  [OK  ] Demo News HD
+  [FAIL] Demo Sports HD - HTTP 403
+  [FAIL] Demo Movies - Medya verisi değil
+  [FAIL] Demo Music - Zaman aşımı
+  [FAIL] Demo Kids - HTTP 404

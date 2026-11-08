@@ -1,0 +1,18 @@
+IPTV CHECKER - PLAYLIST HATALI
+======================================================================
+Girdi dosyası: input.example.txt
+Adet: 1
+
+ADRESLER
+http://bad-panel.example:8080/get.php?username=baduser&password=badpass&type=m3u_plus
+
+DETAYLAR
+======================================================================
+[3] PLAYLIST HATALI
+URL: http://bad-panel.example:8080/get.php?username=baduser&password=badpass&type=m3u_plus
+Kaynak: M3U playlist
+HTTP: 401
+Kontrol edilen: 0
+Çalışan: 0
+Süre: 1.1 sn
+Neden: HTTP 401

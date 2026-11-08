@@ -1,42 +1,63 @@
-# IPTV Checker
+<div align="center">
 
-M3U / Xtream Codes playlist'lerini ve içlerindeki yayınları kontrol eden Python aracı.
+# 🎬 IPTV Checker
 
-> **Türkçe** | [English](#english)
+**Playlist'lerinizi dakikalar içinde tarayın, gerçekten çalışan yayınları görün.**
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Requests](https://img.shields.io/badge/Requests-2.x-2C5BB4?style=for-the-badge)](https://requests.readthedocs.io/)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-6%20passed-16a34a?style=for-the-badge)](#-testler)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](#-kurulum)
+
+[Öne Çıkanlar](#-öne-çıkanlar) • [Kurulum](#-kurulum) • [Hızlı Başlangıç](#-hızlı-başlangıç) • [Örnek Dosyalar](examples/) • [English](#english)
+
+</div>
 
 ---
 
-## Türkçe
+> [!IMPORTANT]
+> **Güvenlik önce gelir:** `input.txt`, `sonuclar/` ve `paneller/` gerçek kullanıcı adı/şifre içerebilir. Bu dosyalar `.gitignore` ile korunur ve repoya **asla** eklenmemelidir. Depodaki `examples/` klasöründe yalnızca **tamamen sahte** örnekler bulunur.
 
-### Ne yapar?
+## 🌟 Neden IPTV Checker?
 
-`input.txt` dosyasındaki her playlist adresi için iki aşamalı kontrol yapar:
+Çoğu playlist kontrol aracı yalnızca "URL 200 döndü mü?" diye bakar. IPTV Checker bununla yetinmez:
 
-1. Playlist adresi açılıyor ve geçerli bir M3U döndürüyor mu?
-2. Playlist açılıyorsa, içinden seçilen yayınlardan en az 2 tanesi oynuyor mu?
+- Playlist'in gerçekten **geçerli M3U** olup olmadığını kontrol eder.
+- İçinden seçtiği yayınların **gerçekten medya verisi** döndürüp döndürmediğini doğrular.
+- HLS manifestlerini, variant'ları ve segmentleri takip eder.
+- Sonuçları anlaşılır kategorilere ayırır.
+- Panel ve kullanıcı bilgilerini düzenli bir envanter olarak tutar.
 
-Sonuçları durumlara göre ayrı TXT dosyalarına yazar. Ayrıca erişilebilen panelleri ve kullanıcı bilgilerini isteğe bağlı olarak kayıt altına alır.
+Kısacası: **çalışıyor gibi görünen** değil, **gerçekten çalışan** yayınları bulur.
 
-### Özellikler
+## ✨ Öne Çıkanlar
 
-- Aynı URL'leri otomatik olarak tekilleştirir.
-- 40 MB'lık playlist dosyalarını tamamen indirmez; yalnızca ilk 500 satırı okur.
-- İlk 3 yayını sırayla, kalan 2 yayını ilk 500 satırdaki havuzdan rastgele seçer.
-- Playlist'te 5'ten az yayın varsa mevcutların tamamını kontrol eder.
-- HLS (`m3u8`) yayınlarında manifest → variant → segment zincirini doğrular.
-- MPEG-TS yayınlarında `0x47` senkron baytını, MP4/fMP4 yayınlarında `ftyp` imzasını kontrol eder.
-- HTML hata sayfalarını veya boş yanıtları çalışan yayın olarak kabul etmez.
-- Playlist ve yayın kontrollerini paralel çalıştırır.
-- Sonuçları `SAĞLIKLI`, `ZAYIF`, `YAYIN YOK` ve `PLAYLIST HATALI` olarak sınıflandırır.
-- Erişilebilen panelleri ve kullanıcı bilgilerini ayrı dosyalarda tutar.
-- Aynı `username:password` birden fazla panelde geçiyorsa bunları gruplar.
+| | Özellik |
+|---|---|
+| ⚡ | **Hız odaklı:** 40 MB'lık playlist'i tamamen indirmez, yalnızca ilk 500 satırı okur. |
+| 🎯 | **Akıllı örnekleme:** İlk 3 yayını sırayla, kalan 2 yayını ilk 500 satırdan rastgele seçer. |
+| 🔍 | **Gerçek doğrulama:** HTTP 200 tek başına yeterli değildir; HLS segmenti veya TS/MP4 medya baytı aranır. |
+| 📊 | **Net raporlar:** `SAĞLIKLI`, `ZAYIF`, `YAYIN YOK`, `PLAYLIST HATALI` olarak ayrı dosyalara yazılır. |
+| 🧾 | **Panel envanteri:** Erişilebilen paneller ve `username:password` kayıtları tutulur. |
+| 🔁 | **Çoklu panel gruplama:** Aynı kullanıcı bilgisi 2+ panelde geçiyorsa `AyniUserpass.txt` ile gruplanır. |
+| 🛡️ | **Güvenlik bilinci:** Gerçek veriler `.gitignore` ile korunur; repoda yalnızca sahte örnekler vardır. |
+| 🧪 | **Test edilmiş:** Yerel mock sunucuyla çalışan 6 otomatik test içerir. |
+| 🪶 | **Hafif:** Tek harici bağımlılık `requests`. |
 
-### Gereksinimler
+## 📦 Hızlı Bakış
 
-- Python 3.10 veya üzeri
-- `requests`
+| Özellik | Değer |
+|---|---|
+| **Girdi** | `input.txt` — satır başına bir playlist URL'si |
+| **Çıktı** | `sonuclar/` — durumlara göre ayrı TXT dosyaları |
+| **Panel kayıtları** | `paneller/` — paneller, kullanıcı bilgileri, eşleşmeler |
+| **Dil** | Python 3.10+ |
+| **Bağımlılık** | `requests` |
+| **Test** | 6 yerel test, gerçek ağ bağlantısı gerektirmez |
+| **Platform** | Windows, Linux, macOS |
 
-### Kurulum
+## 🛠️ Kurulum
 
 ```bash
 git clone https://github.com/furkanckkmus/iptv-checker.git
@@ -44,58 +65,107 @@ cd iptv-checker
 pip install -r requirements.txt
 ```
 
-### Hızlı başlangıç
+## ⚡ Hızlı Başlangıç
 
-1. Proje klasöründe `input.txt` dosyası oluşturun.
-2. Her satıra bir playlist adresi yazın.
+1. `examples/input.example.txt` dosyasını `input.txt` olarak kopyalayın.
+2. Gerçek playlist adreslerinizi `input.txt` içine yazın.
 3. Programı çalıştırın:
 
 ```bash
 python iptv_checker.py
 ```
 
-Program başlangıçta aynı anda kaç playlist kontrol edileceğini sorar:
+Program aynı anda kaç playlist kontrol edileceğini sorar:
 
 ```text
 Aynı anda kontrol edilecek playlist sayısı (varsayılan 5):
 ```
 
-İsterseniz giriş ve çıkış klasörünü komut satırından verebilirsiniz:
+İsterseniz yolları komut satırından da verebilirsiniz:
 
 ```bash
 python iptv_checker.py input.txt sonuclar
 ```
 
-### Girdi formatı
+### Örnek konsol çıktısı
+
+```text
+🔍 IPTV Checker
+📄 Girdi: input.txt
+🔗 Kontrol edilecek adres: 161
+
+🚀 Başlıyor (5 playlist paralel)...
+
+[   1/161] SAĞLIKLI (3/5)          demo-panel.example:8080
+[   2/161] ZAYIF (1/5)             panel-b.example:2095
+[   3/161] YAYIN YOK (0/5)         panel-c.example:8080
+[   4/161] PLAYLIST HATALI         bad-panel.example:8080
+
+📊 Sonuç Özeti
+═══════════════════════════════
+📡 Kontrol edilen : 161
+✅ Sağlıklı       : 84
+⚠️  Zayıf          : 21
+❌ Yayın yok      : 33
+⛔ Playlist hatalı: 23
+⏱️  Toplam süre    : 92.4 sn
+📁 Klasör         : sonuclar
+```
+
+## 📂 Proje Yapısı
+
+```text
+iptv-checker/
+├── iptv_checker.py          # Ana program
+├── requirements.txt         # Python bağımlılıkları
+├── README.md                # Türkçe + İngilizce dokümantasyon
+├── LICENSE                  # MIT lisansı
+├── .gitignore               # Gerçek verileri korur
+├── examples/                # Sahte örnek girdi ve çıktılar
+│   ├── input.example.txt
+│   ├── playlist.example.m3u
+│   ├── stream.example.m3u8
+│   ├── sonuclar/
+│   └── paneller/
+└── tests/
+    └── test_checker.py      # Yerel mock sunucu testleri
+```
+
+## 📥 Girdi Formatı
 
 `input.txt` içinde her satırda bir adres bulunmalıdır:
 
 ```text
 http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
-http://demo-panel.example:8080/get.php?username=test&password=test123&type=m3u
+http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
 https://demo-stream.example/live/example.m3u8
 ```
 
 Desteklenen biçimler:
 
-- `get.php?...type=m3u`
-- `get.php?...type=m3u_plus`
-- Doğrudan `.m3u8` adresleri
+- ✅ `get.php?...type=m3u`
+- ✅ `get.php?...type=m3u_plus`
+- ✅ Doğrudan `.m3u8` adresleri
 
-Boş satırlar ve `#` ile başlayan yorum satırları yok sayılır. Birebir aynı adresler tekrar kontrol edilmez.
+Kurallar:
 
-### Durumlar
+- Boş satırlar yok sayılır.
+- `#` ile başlayan satırlar yorum kabul edilir.
+- Birebir aynı URL'ler yalnızca bir kez kontrol edilir.
+- Sıralama ilk görülme sırasına göre korunur.
 
-| Durum | Koşul |
-|---|---|
-| `SAĞLIKLI` | En az 2 yayın çalışıyor |
-| `ZAYIF` | Yalnızca 1 yayın çalışıyor |
-| `YAYIN YOK` | Playlist açılıyor ancak hiçbir yayın çalışmıyor |
-| `PLAYLIST HATALI` | Playlist açılmıyor, HTML/boş/geçersiz M3U dönüyor veya HTTP hatası var |
+## 🎯 Durumlar
 
-### Çıktı dosyaları
+| Durum | Koşul | Renk |
+|---|---|---|
+| ✅ `SAĞLIKLI` | En az 2 yayın çalışıyor | Yeşil |
+| ⚠️ `ZAYIF` | Yalnızca 1 yayın çalışıyor | Sarı |
+| ❌ `YAYIN YOK` | Playlist açılıyor ama hiçbir yayın çalışmıyor | Kırmızı |
+| ⛔ `PLAYLIST HATALI` | URL açılmıyor, HTML/boş/geçersiz M3U veya HTTP hatası | Koyu kırmızı |
 
-Varsayılan olarak `sonuclar/` klasörü oluşturulur:
+## 📁 Çıktı Dosyaları
+
+Tarama sonunda `sonuclar/` klasörü oluşturulur:
 
 ```text
 sonuclar/
@@ -106,14 +176,29 @@ sonuclar/
 └── ozet.txt
 ```
 
-Her kategori dosyası şunları içerir:
+Her kategori dosyası iki bölümden oluşur:
 
-- Sadece adreslerin bulunduğu `ADRESLER` bölümü
-- HTTP kodu, süre, kontrol edilen/çalışan yayın sayısı ve hata nedenini içeren `DETAYLAR` bölümü
+1. **ADRESLER** — yalnızca URL listesi
+2. **DETAYLAR** — HTTP kodu, süre, kontrol edilen/çalışan yayın sayısı, hata nedeni ve yayın bazlı sonuçlar
 
-`ozet.txt` toplam sayıları, süreyi ve dosya bazlı sonuçları gösterir.
+`ozet.txt` ise toplam sayıları, süreyi ve dosya bazlı dağılımı gösterir.
 
-### Panel ve kullanıcı kayıtları
+## 🗂️ Örnek Dosyalar
+
+Gerçek veri içermeyen, biçimi gösteren örnekler:
+
+| Örnek | Açıklama |
+|---|---|
+| [`examples/input.example.txt`](examples/input.example.txt) | Örnek `input.txt` |
+| [`examples/playlist.example.m3u`](examples/playlist.example.m3u) | Örnek M3U kanal listesi |
+| [`examples/stream.example.m3u8`](examples/stream.example.m3u8) | Örnek HLS medya playlist'i |
+| [`examples/sonuclar/`](examples/sonuclar/) | Örnek kategori raporları |
+| [`examples/paneller/`](examples/paneller/) | Örnek panel ve kullanıcı kayıtları |
+| [`examples/output.example.txt`](examples/output.example.txt) | Eski birleşik `output.txt` biçimi |
+
+> Tüm örneklerdeki adresler, kullanıcı adları ve şifreler **sahtedir**.
+
+## 🔐 Panel ve Kullanıcı Kayıtları
 
 Tarama tamamlandıktan sonra `paneller/` klasörü oluşturulur:
 
@@ -132,14 +217,14 @@ paneller/
 | `AyniUserpass.txt` | Aynı kullanıcı bilgisini kullanan 2+ panel |
 | `eslesmeler.txt` | Panel ↔ kullanıcı eşleşmelerini tutan iç takip dosyası |
 
-Kayıt kuralları:
+### Kayıt kuralları
 
-- Playlist URL'si geçerli M3U döndürüyorsa panel kaydedilir.
-- Geçerli M3U dönüyor ama içinde hiç yayın yoksa panel yine kaydedilir.
-- HTTP hatası, HTML sayfası veya geçersiz M3U varsa panel kaydedilmez.
-- URL'de `username` ve `password` varsa, panel açılmasa bile `Userpass.txt` dosyasına eklenir.
-- Tüm dosyalar append-only çalışır; mevcut kayıtlar tekrar eklenmez.
-- Sıralama ilk görülme sırasına göredir.
+- ✅ Playlist URL'si geçerli M3U döndürüyorsa panel kaydedilir.
+- ✅ Geçerli M3U dönüyor ama içinde hiç yayın yoksa panel yine kaydedilir.
+- ❌ HTTP hatası, HTML sayfası veya geçersiz M3U varsa panel kaydedilmez.
+- ✅ URL'de `username` ve `password` varsa, panel açılmasa bile `Userpass.txt` dosyasına eklenir.
+- 🔁 Tüm dosyalar append-only çalışır; mevcut kayıtlar tekrar eklenmez.
+- 🕒 Sıralama ilk görülme sırasına göredir.
 
 `AyniUserpass.txt` örneği:
 
@@ -148,11 +233,11 @@ AYNI USERNAME:PASSWORD KULLANAN PANELLER
 ============================================================
 
 demo:demo123
-  http://panel-a.example:8080/
-  http://panel-b.example:2095/
+  http://demo-panel.example:8080/
+  http://panel-c.example:8080/
 ```
 
-### Nasıl çalışır?
+## 🧠 Nasıl Çalışır?
 
 ```mermaid
 flowchart TD
@@ -173,16 +258,18 @@ flowchart TD
     L --> M[paneller/]
 ```
 
-Teknik ayrıntılar:
+### Teknik ayrıntılar
 
-- Playlist yanıtı `stream=True` ile okunur ve 500 satır veya 4 MB sınırında durdurulur.
-- Yayın seçimi: ilk 3 sırayla, kalan 2 rastgele.
-- HLS kontrolünde master playlist'teki variant'lar, ardından medya segmentleri denenir.
-- Segmentlerden yalnızca ilk birkaç KB okunur; tüm yayın indirilmez.
-- Zaman aşımları: playlist 10 sn, yayın 8 sn, bağlantı 5 sn.
-- Yayın kontrollerinde VLC kullanıcı aracısı kullanılır.
+- 📥 Playlist yanıtı `stream=True` ile okunur ve **500 satır veya 4 MB** sınırında durdurulur.
+- 🎯 Yayın seçimi: **ilk 3 sırayla, kalan 2 rastgele**.
+- 📺 HLS kontrolünde master playlist'teki variant'lar, ardından medya segmentleri denenir.
+- 📦 Segmentlerden yalnızca ilk birkaç KB okunur; tüm yayın indirilmez.
+- 📡 MPEG-TS için `0x47` senkron baytı, MP4/fMP4 için `ftyp` imzası kontrol edilir.
+- 🚫 HTML hata sayfaları ve boş yanıtlar çalışan yayın sayılmaz.
+- ⏱️ Zaman aşımları: playlist **10 sn**, yayın **8 sn**, bağlantı **5 sn**.
+- 🎭 Yayın isteklerinde VLC kullanıcı aracısı kullanılır.
 
-### Ayarlar
+## ⚙️ Ayarlar
 
 Ayarlar `iptv_checker.py` dosyasının başındaki sabitlerden değiştirilebilir:
 
@@ -198,7 +285,7 @@ Ayarlar `iptv_checker.py` dosyasının başındaki sabitlerden değiştirilebili
 
 Paralellik program çalışırken sorulur.
 
-### Testler
+## 🧪 Testler
 
 Yerel mock sunucu kullanan testler:
 
@@ -206,58 +293,104 @@ Yerel mock sunucu kullanan testler:
 python -m unittest discover -s tests -v
 ```
 
-Testler gerçek IPTV adreslerine istek atmaz.
+Test kapsamı:
 
-### Güvenlik ve gizlilik
+- ✅ Durum sınıflandırması
+- ✅ 500 satır limiti
+- ✅ Yayın seçimi
+- ✅ Kullanıcı bilgisi koruma
+- ✅ Panel normalizasyonu
+- ✅ Panel kayıtlarında duplicate engelleme
 
-> **Önemli:** `input.txt`, `sonuclar/` ve `paneller/` gerçek kullanıcı adı/şifre içerebilir. Bu dosyaları Git'e eklemeyin, GitHub'a push etmeyin veya üçüncü kişilerle paylaşmayın.
+Testler **gerçek IPTV adreslerine istek atmaz**.
+
+## 🛡️ Güvenlik
+
+> [!WARNING]
+> `input.txt`, `sonuclar/` ve `paneller/` gerçek kullanıcı adı/şifre içerebilir. Bu dosyaları Git'e eklemeyin, GitHub'a push etmeyin veya üçüncü kişilerle paylaşmayın.
 
 - `.gitignore` bu dosyaları varsayılan olarak hariç tutar.
 - Paylaşacağınız ekran görüntülerinde URL'leri ve kullanıcı bilgilerini maskeleyin.
 - Yanlışlıkla gizli bilgi commit ederseniz, ilgili hesapların şifrelerini değiştirin.
 - Bu araç yayın içeriğini indirmez, kaydetmez veya DRM korumasını aşmaz.
 
-### Yasal uyarı
+## ⚖️ Yasal Uyarı
 
 Bu araç yalnızca erişim izniniz olan playlist'leri test etmek için kullanılmalıdır. Kullanımınızdan doğacak yasal sorumluluk size aittir. Yayın sağlayıcılarının kullanım koşullarına ve bulunduğunuz ülkenin yasalarına uyun.
 
-### Lisans
+## 🤝 Katkı
+
+Katkılar memnuniyetle karşılanır:
+
+```bash
+git clone https://github.com/furkanckkmus/iptv-checker.git
+cd iptv-checker
+git checkout -b feature/yeni-ozellik
+```
+
+Değişiklikten önce ve sonra testleri çalıştırın:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Ardından bir Pull Request açın.
+
+## ⭐ Destek
+
+Projeyi faydalı bulduysanız:
+
+- ⭐ Repoya yıldız verin
+- 🐛 Hata bildirin
+- 💡 Yeni özellik önerin
+- 🔗 Çevrenizle paylaşın
+
+## 📄 Lisans
 
 [MIT](LICENSE)
 
 ---
 
-## English
+<a id="english"></a>
 
-### What does it do?
+# 🇬🇧 English
 
-For every playlist URL in `input.txt`, the tool performs two checks:
+**Scan your playlists in minutes and see which streams actually work.**
 
-1. Does the playlist URL open and return a valid M3U file?
-2. If it opens, do at least 2 of the sampled streams actually play?
+[![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-6%20passed-16a34a?style=for-the-badge)](#-tests)
 
-Results are written to separate TXT files grouped by status. Optionally, accessible panels and credentials can also be recorded.
+> [!IMPORTANT]
+> **Security first:** `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. They are excluded by `.gitignore` and must never be committed. All files under `examples/` are completely fake.
 
-### Features
+## ✨ Why IPTV Checker?
 
-- Deduplicates identical input URLs.
-- Does not download a full 40 MB playlist; it reads only the first 500 lines.
-- Selects the first 3 streams in order and 2 random streams from the first 500 lines.
-- Checks all available streams when the playlist contains fewer than 5.
-- Validates HLS (`m3u8`) streams through manifest → variant → segment.
-- Checks the `0x47` sync byte for MPEG-TS and the `ftyp` signature for MP4/fMP4.
-- Rejects HTML error pages and empty responses.
-- Runs playlist and stream checks in parallel.
-- Classifies results as `HEALTHY`, `WEAK`, `NO STREAM`, and `INVALID PLAYLIST`.
-- Records accessible panels and credentials separately.
-- Groups credentials that appear on multiple panels.
+Most playlist checkers only ask: "Did the URL return HTTP 200?" IPTV Checker goes further:
 
-### Requirements
+- Verifies that the response is a real M3U playlist.
+- Confirms that sampled streams return actual media data.
+- Follows HLS manifests, variants, and segments.
+- Groups results into clear categories.
+- Keeps a clean inventory of panels and credentials.
 
-- Python 3.10+
-- `requests`
+It finds streams that **actually work**, not streams that merely **look like they work**.
 
-### Installation
+## 🚀 Highlights
+
+| | Feature |
+|---|---|
+| ⚡ | **Fast:** Reads only the first 500 lines instead of downloading a 40 MB playlist. |
+| 🎯 | **Smart sampling:** First 3 streams in order + 2 random streams from the first 500 lines. |
+| 🔍 | **Real validation:** HTTP 200 is not enough; HLS segments or TS/MP4 media bytes are required. |
+| 📊 | **Clear reports:** Separate files for `HEALTHY`, `WEAK`, `NO STREAM`, and `INVALID PLAYLIST`. |
+| 🧾 | **Panel inventory:** Accessible panels and `username:password` records. |
+| 🔁 | **Multi-panel grouping:** Credentials used on 2+ panels are grouped in `AyniUserpass.txt`. |
+| 🛡️ | **Security aware:** Real data is excluded; only fake examples are committed. |
+| 🧪 | **Tested:** 6 automated tests using a local mock server. |
+| 🪶 | **Lightweight:** Only one external dependency: `requests`. |
+
+## 🛠️ Installation
 
 ```bash
 git clone https://github.com/furkanckkmus/iptv-checker.git
@@ -265,56 +398,78 @@ cd iptv-checker
 pip install -r requirements.txt
 ```
 
-### Quick start
-
-1. Create an `input.txt` file in the project directory.
-2. Put one playlist URL on each line.
-3. Run:
+## ⚡ Quick Start
 
 ```bash
+cp examples/input.example.txt input.txt
+# Add your own playlist URLs to input.txt
 python iptv_checker.py
 ```
 
-The program asks for the number of playlists to check concurrently:
+The program asks how many playlists to check concurrently:
 
 ```text
 Aynı anda kontrol edilecek playlist sayısı (varsayılan 5):
 ```
 
-You can also provide input and output paths:
+You can also pass input and output paths:
 
 ```bash
 python iptv_checker.py input.txt sonuclar
 ```
 
-### Input format
+## 📂 Project Structure
+
+```text
+iptv-checker/
+├── iptv_checker.py          # Main program
+├── requirements.txt         # Python dependencies
+├── README.md                # Turkish + English documentation
+├── LICENSE                  # MIT license
+├── .gitignore               # Protects real data
+├── examples/                # Fake input and output samples
+│   ├── input.example.txt
+│   ├── playlist.example.m3u
+│   ├── stream.example.m3u8
+│   ├── sonuclar/
+│   └── paneller/
+└── tests/
+    └── test_checker.py      # Local mock server tests
+```
+
+## 📥 Input Format
+
+One URL per line:
 
 ```text
 http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
-http://demo-panel.example:8080/get.php?username=test&password=test123&type=m3u
+http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
 https://demo-stream.example/live/example.m3u8
 ```
 
 Supported formats:
 
-- `get.php?...type=m3u`
-- `get.php?...type=m3u_plus`
-- Direct `.m3u8` URLs
+- ✅ `get.php?...type=m3u`
+- ✅ `get.php?...type=m3u_plus`
+- ✅ Direct `.m3u8` URLs
 
-Blank lines and lines starting with `#` are ignored. Exact duplicate URLs are checked only once.
+Rules:
 
-### Statuses
+- Blank lines are ignored.
+- Lines starting with `#` are comments.
+- Exact duplicate URLs are checked once.
+- First-seen order is preserved.
+
+## 🎯 Statuses
 
 | Status | Condition |
 |---|---|
-| `SAĞLIKLI` / `HEALTHY` | At least 2 streams work |
-| `ZAYIF` / `WEAK` | Exactly 1 stream works |
-| `YAYIN YOK` / `NO STREAM` | Playlist opens but no stream works |
-| `PLAYLIST HATALI` / `INVALID PLAYLIST` | URL does not open, returns HTML/empty/invalid M3U, or HTTP error |
+| ✅ `SAĞLIKLI` / `HEALTHY` | At least 2 streams work |
+| ⚠️ `ZAYIF` / `WEAK` | Exactly 1 stream works |
+| ❌ `YAYIN YOK` / `NO STREAM` | Playlist opens but no stream works |
+| ⛔ `PLAYLIST HATALI` / `INVALID PLAYLIST` | URL does not open, returns HTML/empty/invalid M3U, or HTTP error |
 
-### Output files
-
-The default output directory is `sonuclar/`:
+## 📁 Output Files
 
 ```text
 sonuclar/
@@ -327,14 +482,25 @@ sonuclar/
 
 Each category file contains:
 
-- An `ADRESLER` (URLs) section
-- A `DETAYLAR` (details) section with HTTP code, duration, checked/working stream counts, and failure reasons
+- **ADRESLER** — a plain URL list
+- **DETAYLAR** — HTTP code, duration, checked/working stream counts, failure reasons, and per-stream results
 
 `ozet.txt` contains totals, elapsed time, and per-file counts.
 
-### Panel and credential records
+## 🗂️ Example Files
 
-After the scan finishes, a `paneller/` directory is created:
+| Example | Description |
+|---|---|
+| [`examples/input.example.txt`](examples/input.example.txt) | Sample `input.txt` |
+| [`examples/playlist.example.m3u`](examples/playlist.example.m3u) | Sample M3U channel list |
+| [`examples/stream.example.m3u8`](examples/stream.example.m3u8) | Sample HLS media playlist |
+| [`examples/sonuclar/`](examples/sonuclar/) | Sample category reports |
+| [`examples/paneller/`](examples/paneller/) | Sample panel and credential records |
+| [`examples/output.example.txt`](examples/output.example.txt) | Legacy combined `output.txt` format |
+
+> All addresses, usernames, and passwords in the examples are fake.
+
+## 🔐 Panel and Credential Records
 
 ```text
 paneller/
@@ -353,14 +519,14 @@ paneller/
 
 Recording rules:
 
-- A panel is recorded if the playlist URL returns a valid M3U.
-- A valid M3U with zero streams is still recorded.
-- HTTP errors, HTML pages, and invalid M3U responses are not recorded as panels.
-- If the URL contains `username` and `password`, the credentials are added to `Userpass.txt` even when the panel does not open.
-- All files are append-only; existing records are never duplicated.
-- Records keep their first-seen order.
+- ✅ A panel is recorded if the playlist URL returns a valid M3U.
+- ✅ A valid M3U with zero streams is still recorded.
+- ❌ HTTP errors, HTML pages, and invalid M3U responses are not recorded as panels.
+- ✅ Credentials are added to `Userpass.txt` even when the panel does not open.
+- 🔁 All files are append-only; existing records are never duplicated.
+- 🕒 First-seen order is preserved.
 
-### How it works
+## 🧠 How It Works
 
 ```mermaid
 flowchart TD
@@ -374,23 +540,25 @@ flowchart TD
     H -- 2 or more --> I[HEALTHY]
     H -- 1 --> J[WEAK]
     H -- 0 --> K[NO STREAM]
-    E --> L[results/]
+    E --> L[sonuclar/]
     I --> L
     J --> L
     K --> L
-    L --> M[panels/]
+    L --> M[paneller/]
 ```
 
 Technical details:
 
-- Playlist responses are streamed and stopped at 500 lines or 4 MB.
-- Stream selection: first 3 in order, 2 random from the rest.
-- HLS checks try master playlist variants and then media segments.
-- Only the first few KB of each segment is read; streams are not fully downloaded.
-- Timeouts: playlist 10 s, stream 8 s, connection 5 s.
-- A VLC user agent is used for stream requests.
+- 📥 Playlist responses are streamed and stopped at **500 lines or 4 MB**.
+- 🎯 Stream selection: **first 3 in order + 2 random**.
+- 📺 HLS checks try master playlist variants, then media segments.
+- 📦 Only the first few KB of each segment is read; streams are not fully downloaded.
+- 📡 MPEG-TS uses the `0x47` sync byte; MP4/fMP4 uses the `ftyp` signature.
+- 🚫 HTML error pages and empty responses are rejected.
+- ⏱️ Timeouts: playlist **10 s**, stream **8 s**, connection **5 s**.
+- 🎭 A VLC user agent is used for stream requests.
 
-### Configuration
+## ⚙️ Configuration
 
 Edit the constants at the top of `iptv_checker.py`:
 
@@ -406,29 +574,48 @@ Edit the constants at the top of `iptv_checker.py`:
 
 Parallelism is requested at runtime.
 
-### Tests
-
-Tests use a local mock server:
+## 🧪 Tests
 
 ```bash
 python -m unittest discover -s tests -v
 ```
 
-The tests never contact real IPTV services.
+The tests use a local mock server and never contact real IPTV services.
 
-### Security and privacy
+## 🛡️ Security
 
-> **Important:** `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. Never commit, push, or share these files.
+> [!WARNING]
+> `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. Never commit, push, or share these files.
 
 - `.gitignore` excludes them by default.
 - Redact URLs and credentials in screenshots.
 - If you accidentally commit secrets, rotate the affected passwords.
 - This tool does not download, store, or bypass DRM on any content.
 
-### Legal notice
+## ⚖️ Legal Notice
 
 Use this tool only against playlists you are authorized to test. You are responsible for complying with provider terms and local laws.
 
-### License
+## 🤝 Contributing
+
+```bash
+git clone https://github.com/furkanckkmus/iptv-checker.git
+cd iptv-checker
+git checkout -b feature/my-feature
+python -m unittest discover -s tests -v
+```
+
+Then open a Pull Request.
+
+## ⭐ Support
+
+If you find this project useful:
+
+- ⭐ Star the repository
+- 🐛 Report bugs
+- 💡 Suggest features
+- 🔗 Share it with others
+
+## 📄 License
 
 [MIT](LICENSE)

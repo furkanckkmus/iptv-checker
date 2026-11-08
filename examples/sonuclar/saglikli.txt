@@ -1,0 +1,25 @@
+IPTV CHECKER - SAĞLIKLI
+======================================================================
+Girdi dosyası: input.example.txt
+Adet: 1
+
+ADRESLER
+http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+
+DETAYLAR
+======================================================================
+[0] SAĞLIKLI (3/5)
+URL: http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+Kaynak: M3U playlist
+HTTP: 200
+Taranan: ilk 500 satır
+Bulunan yayın: 247
+Kontrol edilen: 5
+Çalışan: 3
+Süre: 6.4 sn
+Yayın kontrolleri:
+  [OK  ] Demo News HD
+  [OK  ] Demo Sports HD
+  [FAIL] Demo Movies - HTTP 404
+  [OK  ] Demo Music
+  [FAIL] Demo Kids - Zaman aşımı

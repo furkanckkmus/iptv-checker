@@ -1,0 +1,25 @@
+IPTV CHECKER - YAYIN YOK
+======================================================================
+Girdi dosyası: input.example.txt
+Adet: 1
+
+ADRESLER
+http://panel-c.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+
+DETAYLAR
+======================================================================
+[2] YAYIN YOK (0/5)
+URL: http://panel-c.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+Kaynak: M3U playlist
+HTTP: 200
+Taranan: ilk 500 satır
+Bulunan yayın: 96
+Kontrol edilen: 5
+Çalışan: 0
+Süre: 14.8 sn
+Yayın kontrolleri:
+  [FAIL] Demo News HD - HTTP 404
+  [FAIL] Demo Sports HD - HTTP 404
+  [FAIL] Demo Movies - HTML yanıtı
+  [FAIL] Demo Music - Zaman aşımı
+  [FAIL] Demo Kids - Veri gelmedi

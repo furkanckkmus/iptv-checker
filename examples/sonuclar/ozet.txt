@@ -1,0 +1,21 @@
+IPTV CHECKER - ÖZET
+======================================================================
+Girdi dosyası  : input.example.txt
+Çıktı klasörü  : sonuclar
+Toplam satır   : 5
+Tekrar (atıldı): 1
+Geçersiz satır : 0
+Kontrol edilen : 4
+Toplam süre    : 18.7 sn
+
+DURUMLAR
+SAĞLIKLI       : 1
+ZAYIF          : 1
+YAYIN YOK      : 1
+PLAYLIST HATALI: 1
+
+DOSYALAR
+saglikli.txt          : 1 adet
+zayif.txt             : 1 adet
+yayin_yok.txt         : 1 adet
+playlist_hatali.txt   : 1 adet

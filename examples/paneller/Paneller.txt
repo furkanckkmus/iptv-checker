@@ -1,0 +1,3 @@
+http://demo-panel.example:8080/
+http://panel-b.example:2095/
+http://panel-c.example:8080/

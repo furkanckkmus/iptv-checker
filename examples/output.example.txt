@@ -1,0 +1,46 @@
+# LEGACY EXAMPLE / ESKİ BİÇİM ÖRNEĞİ
+# Bu dosya eski sürümlerin tek parça output.txt biçimini gösterir.
+# Güncel sürümler sonuçları sonuclar/ klasörüne ayrı dosyalar olarak yazar.
+# This file shows the old single-file output.txt format.
+# Current versions write separate files under sonuclar/.
+
+IPTV CHECKER - SONUÇLAR
+======================================================================
+Girdi dosyası : input.example.txt
+Toplam satır  : 5
+Tekrar (atıldı): 1
+Geçersiz satır : 0
+Kontrol edilen : 4
+Toplam süre    : 18.7 sn
+
+SAĞLIKLI       : 1
+ZAYIF          : 1
+YAYIN YOK      : 1
+PLAYLIST HATALI: 1
+
+======================================================================
+[0] SAĞLIKLI (3/5)
+URL: http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+HTTP: 200
+Kontrol edilen: 5
+Çalışan: 3
+Süre: 6.4 sn
+======================================================================
+[1] ZAYIF (1/5)
+URL: http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
+HTTP: 200
+Kontrol edilen: 5
+Çalışan: 1
+Süre: 11.2 sn
+======================================================================
+[2] YAYIN YOK (0/5)
+URL: http://panel-c.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+HTTP: 200
+Kontrol edilen: 5
+Çalışan: 0
+Süre: 14.8 sn
+======================================================================
+[3] PLAYLIST HATALI
+URL: http://bad-panel.example:8080/get.php?username=baduser&password=badpass&type=m3u_plus
+HTTP: 401
+Neden: HTTP 401

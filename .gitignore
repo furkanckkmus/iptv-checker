@@ -1,8 +1,9 @@
-# Local data that may contain credentials
-input.txt
-sonuclar/
-paneller/
-output.txt
+# Local data that may contain credentials (repository root only)
+/input.txt
+/sonuclar/
+/paneller/
+/output.txt
+
 *.log
 
 # Python
@@ -25,3 +26,5 @@ Thumbs.db
 # Local playlists
 *.m3u
 *.m3u8
+!examples/*.m3u
+!examples/*.m3u8

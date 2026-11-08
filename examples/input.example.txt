@@ -5,5 +5,6 @@
 # Usage: copy this file to input.txt and add your own URLs.
 
 http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
-http://demo-panel.example:8080/get.php?username=test&password=test123&type=m3u
+http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u
+http://panel-c.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
 https://demo-stream.example/live/example.m3u8

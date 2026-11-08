@@ -1,0 +1,6 @@
+AYNI USERNAME:PASSWORD KULLANAN PANELLER
+============================================================
+
+demo:demo123
+  http://demo-panel.example:8080/
+  http://panel-c.example:8080/
