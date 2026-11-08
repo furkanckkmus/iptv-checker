@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Requests](https://img.shields.io/badge/Requests-2.x-2C5BB4?style=for-the-badge)](https://requests.readthedocs.io/)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-6%20passed-16a34a?style=for-the-badge)](#-testler)
+[![Tests](https://img.shields.io/badge/Tests-8%20passed-16a34a?style=for-the-badge)](#-testler)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](#-kurulum)
 
 [Öne Çıkanlar](#-öne-çıkanlar) • [Kurulum](#-kurulum) • [Hızlı Başlangıç](#-hızlı-başlangıç) • [Örnek Dosyalar](examples/) • [English](#english)
@@ -36,13 +36,14 @@ Kısacası: **çalışıyor gibi görünen** değil, **gerçekten çalışan** y
 | | Özellik |
 |---|---|
 | ⚡ | **Hız odaklı:** 40 MB'lık playlist'i tamamen indirmez, yalnızca ilk 500 satırı okur. |
+| 🖥️ | **Canlı terminal paneli:** İlerleme, kalan süre, şu an işlenen ve sıradaki 10 adres tek ekranda. |
 | 🎯 | **Akıllı örnekleme:** İlk 3 yayını sırayla, kalan 2 yayını ilk 500 satırdan rastgele seçer. |
 | 🔍 | **Gerçek doğrulama:** HTTP 200 tek başına yeterli değildir; HLS segmenti veya TS/MP4 medya baytı aranır. |
 | 📊 | **Net raporlar:** `SAĞLIKLI`, `ZAYIF`, `YAYIN YOK`, `PLAYLIST HATALI` olarak ayrı dosyalara yazılır. |
 | 🧾 | **Panel envanteri:** Erişilebilen paneller ve `username:password` kayıtları tutulur. |
 | 🔁 | **Çoklu panel gruplama:** Aynı kullanıcı bilgisi 2+ panelde geçiyorsa `AyniUserpass.txt` ile gruplanır. |
 | 🛡️ | **Güvenlik bilinci:** Gerçek veriler `.gitignore` ile korunur; repoda yalnızca sahte örnekler vardır. |
-| 🧪 | **Test edilmiş:** Yerel mock sunucuyla çalışan 6 otomatik test içerir. |
+| 🧪 | **Test edilmiş:** Yerel mock sunucuyla çalışan 8 otomatik test içerir. |
 | 🪶 | **Hafif:** Tek harici bağımlılık `requests`. |
 
 ## 📦 Hızlı Bakış
@@ -54,7 +55,7 @@ Kısacası: **çalışıyor gibi görünen** değil, **gerçekten çalışan** y
 | **Panel kayıtları** | `paneller/` — paneller, kullanıcı bilgileri, eşleşmeler |
 | **Dil** | Python 3.10+ |
 | **Bağımlılık** | `requests` |
-| **Test** | 6 yerel test, gerçek ağ bağlantısı gerektirmez |
+| **Test** | 8 yerel test, gerçek ağ bağlantısı gerektirmez |
 | **Platform** | Windows, Linux, macOS |
 
 ## 🛠️ Kurulum
@@ -87,7 +88,49 @@ Aynı anda kontrol edilecek playlist sayısı (varsayılan 5):
 python iptv_checker.py input.txt sonuclar
 ```
 
-### Örnek konsol çıktısı
+### Canlı terminal gösterimi
+
+Program terminalde çalışırken ekranı 0,5 saniyede bir yeniler. Üst bölümde ilerleme, alt bölümde sıradaki 10 adres gösterilir:
+
+```text
+════════════════════════════════════════════════════════════════════
+📺 IPTV CHECKER
+════════════════════════════════════════════════════════════════════
+📡 Toplam       : 161
+✅ Tamamlanan   : 42  (%26.1)
+⏳ Kalan        : 119
+🔄 Paralel      : 5
+🎯 Şu an        : #43, #44, #45, #46, #47
+⏱️  Geçen süre   : 00:01:24
+🚀 Hız          : 0.50 işlem/sn
+🕒 Tahmini süre : 00:03:58
+[████████████░░░░░░░░░░░░░░░░░░░░] %26.1
+────────────────────────────────────────────────────────────────────
+Sıradaki 10:
+  [   48/161] panel48.example:8080
+  [   49/161] panel49.example:8080
+  [   50/161] panel50.example:8080
+  [   51/161] panel51.example:8080
+  [   52/161] panel52.example:8080
+  [   53/161] panel53.example:8080
+  [   54/161] panel54.example:8080
+  [   55/161] panel55.example:8080
+  [   56/161] panel56.example:8080
+  [   57/161] panel57.example:8080
+────────────────────────────────────────────────────────────────────
+```
+
+Gösterilen bilgiler:
+
+- Toplam, tamamlanan ve kalan işlem sayısı
+- Yüzde ve görsel ilerleme çubuğu
+- Şu an işlenen işlem numaraları
+- Geçen süre, işlem hızı ve tahmini kalan süre
+- Sıradaki 10 adres (yalnızca `host:port`, kimlik bilgisi değil)
+
+> Terminal canlı ekranı desteklemiyorsa veya çıktı bir dosyaya yönlendirilmişse program otomatik olarak satır satır çıktı moduna geçer.
+
+### Örnek satır satır çıktı
 
 ```text
 🔍 IPTV Checker
@@ -100,16 +143,6 @@ python iptv_checker.py input.txt sonuclar
 [   2/161] ZAYIF (1/5)             panel-b.example:2095
 [   3/161] YAYIN YOK (0/5)         panel-c.example:8080
 [   4/161] PLAYLIST HATALI         bad-panel.example:8080
-
-📊 Sonuç Özeti
-═══════════════════════════════
-📡 Kontrol edilen : 161
-✅ Sağlıklı       : 84
-⚠️  Zayıf          : 21
-❌ Yayın yok      : 33
-⛔ Playlist hatalı: 23
-⏱️  Toplam süre    : 92.4 sn
-📁 Klasör         : sonuclar
 ```
 
 ## 📂 Proje Yapısı
@@ -301,6 +334,8 @@ Test kapsamı:
 - ✅ Kullanıcı bilgisi koruma
 - ✅ Panel normalizasyonu
 - ✅ Panel kayıtlarında duplicate engelleme
+- ✅ Canlı terminal gösterge paneli
+- ✅ Süre biçimlendirme ve host gösterimi
 
 Testler **gerçek IPTV adreslerine istek atmaz**.
 
@@ -359,7 +394,7 @@ Projeyi faydalı bulduysanız:
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-6%20passed-16a34a?style=for-the-badge)](#-tests)
+[![Tests](https://img.shields.io/badge/Tests-8%20passed-16a34a?style=for-the-badge)](#-tests)
 
 > [!IMPORTANT]
 > **Security first:** `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. They are excluded by `.gitignore` and must never be committed. All files under `examples/` are completely fake.
@@ -381,13 +416,14 @@ It finds streams that **actually work**, not streams that merely **look like the
 | | Feature |
 |---|---|
 | ⚡ | **Fast:** Reads only the first 500 lines instead of downloading a 40 MB playlist. |
+| 🖥️ | **Live terminal dashboard:** Progress, ETA, current items, and the next 10 addresses on one screen. |
 | 🎯 | **Smart sampling:** First 3 streams in order + 2 random streams from the first 500 lines. |
 | 🔍 | **Real validation:** HTTP 200 is not enough; HLS segments or TS/MP4 media bytes are required. |
 | 📊 | **Clear reports:** Separate files for `HEALTHY`, `WEAK`, `NO STREAM`, and `INVALID PLAYLIST`. |
 | 🧾 | **Panel inventory:** Accessible panels and `username:password` records. |
 | 🔁 | **Multi-panel grouping:** Credentials used on 2+ panels are grouped in `AyniUserpass.txt`. |
 | 🛡️ | **Security aware:** Real data is excluded; only fake examples are committed. |
-| 🧪 | **Tested:** 6 automated tests using a local mock server. |
+| 🧪 | **Tested:** 8 automated tests using a local mock server. |
 | 🪶 | **Lightweight:** Only one external dependency: `requests`. |
 
 ## 🛠️ Installation
@@ -417,6 +453,48 @@ You can also pass input and output paths:
 ```bash
 python iptv_checker.py input.txt sonuclar
 ```
+
+### Live terminal dashboard
+
+When running in a terminal, the screen refreshes every 0.5 seconds. The top section shows progress; the bottom section shows the next 10 addresses:
+
+```text
+════════════════════════════════════════════════════════════════════
+📺 IPTV CHECKER
+════════════════════════════════════════════════════════════════════
+📡 Toplam       : 161
+✅ Tamamlanan   : 42  (%26.1)
+⏳ Kalan        : 119
+🔄 Paralel      : 5
+🎯 Şu an        : #43, #44, #45, #46, #47
+⏱️  Geçen süre   : 00:01:24
+🚀 Hız          : 0.50 işlem/sn
+🕒 Tahmini süre : 00:03:58
+[████████████░░░░░░░░░░░░░░░░░░░░] %26.1
+────────────────────────────────────────────────────────────────────
+Sıradaki 10:
+  [   48/161] panel48.example:8080
+  [   49/161] panel49.example:8080
+  [   50/161] panel50.example:8080
+  [   51/161] panel51.example:8080
+  [   52/161] panel52.example:8080
+  [   53/161] panel53.example:8080
+  [   54/161] panel54.example:8080
+  [   55/161] panel55.example:8080
+  [   56/161] panel56.example:8080
+  [   57/161] panel57.example:8080
+────────────────────────────────────────────────────────────────────
+```
+
+It shows:
+
+- Total, completed, and remaining items
+- Percentage and a visual progress bar
+- Current item numbers being processed
+- Elapsed time, processing speed, and estimated time remaining
+- The next 10 addresses (only `host:port`, never credentials)
+
+> If the terminal does not support live screen updates, or output is redirected to a file, the program automatically falls back to line-by-line output.
 
 ## 📂 Project Structure
 
@@ -581,6 +659,17 @@ python -m unittest discover -s tests -v
 ```
 
 The tests use a local mock server and never contact real IPTV services.
+
+Coverage:
+
+- ✅ Status classification
+- ✅ 500-line playlist cap
+- ✅ Stream sampling
+- ✅ Credential preservation
+- ✅ Panel normalization
+- ✅ Panel record deduplication
+- ✅ Live terminal dashboard
+- ✅ Duration formatting and host display
 
 ## 🛡️ Security
 

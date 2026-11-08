@@ -13,7 +13,9 @@ Panel ve kullanıcı bilgileri paneller/ klasörüne eklenir:
   Paneller.txt, Userpass.txt, AyniUserpass.txt, eslesmeler.txt
 """
 
+import os
 import random
+import shutil
 import sys
 import threading
 import time
@@ -902,6 +904,106 @@ def ask_parallelism() -> int:
         print("1 ile 100 arasında bir sayı girin.")
 
 
+def enable_ansi() -> None:
+    """Windows konsolunda ANSI kaçış dizilerini etkinleştirir."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)
+        mode = ctypes.c_uint32()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+    except Exception:
+        pass
+
+
+def format_duration(seconds: float) -> str:
+    seconds = max(0, int(seconds))
+    hours, remainder = divmod(seconds, 3600)
+    minutes, secs = divmod(remainder, 60)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
+
+def display_host(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.netloc or url
+
+
+def build_progress_frame(
+    total: int,
+    completed: set[int],
+    started: set[int],
+    urls: list[str],
+    parallelism: int,
+    elapsed: float,
+) -> str:
+    done = len(completed)
+    remaining = max(0, total - done)
+    percent = (done / total * 100) if total else 0.0
+
+    current = sorted(started - completed)
+    pending = [index for index in range(total) if index not in started]
+
+    bar_width = 32
+    filled = int(bar_width * done / total) if total else bar_width
+    bar = "█" * filled + "░" * (bar_width - filled)
+
+    speed = done / elapsed if elapsed > 0 else 0.0
+    if remaining == 0:
+        eta_text = "00:00:00"
+    elif done:
+        eta_text = format_duration(elapsed / done * remaining)
+    else:
+        eta_text = "--:--:--"
+
+    def indices_text(indices: list[int], limit: int = 8) -> str:
+        parts = [f"#{index + 1}" for index in indices[:limit]]
+        if len(indices) > limit:
+            parts.append(f"+{len(indices) - limit}")
+        return ", ".join(parts) if parts else "-"
+
+    try:
+        width = max(60, min(100, shutil.get_terminal_size((80, 24)).columns))
+    except OSError:
+        width = 78
+
+    lines = [
+        "═" * width,
+        "📺 IPTV CHECKER",
+        "═" * width,
+        f"📡 Toplam       : {total}",
+        f"✅ Tamamlanan   : {done}  (%{percent:.1f})",
+        f"⏳ Kalan        : {remaining}",
+        f"🔄 Paralel      : {parallelism}",
+        f"🎯 Şu an        : {indices_text(current)}",
+        f"⏱️  Geçen süre   : {format_duration(elapsed)}",
+        f"🚀 Hız          : {speed:.2f} işlem/sn",
+        f"🕒 Tahmini süre : {eta_text}",
+        f"[{bar}] %{percent:.1f}",
+        "─" * width,
+        "Sıradaki 10:",
+    ]
+
+    if pending:
+        for index in pending[:10]:
+            lines.append(
+                f"  [{index + 1:>5}/{total}] {display_host(urls[index])}"
+            )
+    else:
+        lines.append("  (sırada bekleyen yok)")
+
+    lines.append("─" * width)
+    return "\n".join(lines)
+
+
+def draw_progress(frame: str) -> None:
+    sys.stdout.write("\033[H" + frame + "\033[J")
+    sys.stdout.flush()
+
+
 def main() -> None:
     input_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("input.txt")
     output_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("sonuclar")
@@ -928,36 +1030,96 @@ def main() -> None:
     print()
 
     parallelism = ask_parallelism()
-    print(f"\n🚀 Başlıyor ({parallelism} playlist paralel)...\n")
+    live = sys.stdout.isatty()
+
+    if live:
+        enable_ansi()
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
+    else:
+        print(f"\n🚀 Başlıyor ({parallelism} playlist paralel)...\n")
 
     started = time.monotonic()
     results: list[Result | None] = [None] * len(urls)
-    lock = threading.Lock()
+    state_lock = threading.Lock()
+    started_indices: set[int] = set()
+    completed_indices: set[int] = set()
+    render_stop = threading.Event()
     done = 0
 
-    with ThreadPoolExecutor(max_workers=parallelism) as executor:
-        futures = {
-            executor.submit(check_source, i, url): i
-            for i, url in enumerate(urls)
-        }
+    def check_one(index: int) -> Result:
+        with state_lock:
+            started_indices.add(index)
+        return check_source(index, urls[index])
 
-        for future in as_completed(futures):
-            index = futures[future]
-            try:
-                result = future.result()
-            except Exception as exc:
-                result = Result(
-                    index=index,
-                    url=urls[index],
-                    status=STATUS_BAD,
-                    reason=f"Beklenmeyen hata ({type(exc).__name__})",
+    def render_loop() -> None:
+        while not render_stop.wait(0.5):
+            with state_lock:
+                started_snapshot = set(started_indices)
+                completed_snapshot = set(completed_indices)
+            frame = build_progress_frame(
+                len(urls),
+                completed_snapshot,
+                started_snapshot,
+                urls,
+                parallelism,
+                time.monotonic() - started,
+            )
+            draw_progress(frame)
+
+    render_thread = threading.Thread(target=render_loop, daemon=True)
+
+    try:
+        if live:
+            render_thread.start()
+            draw_progress(
+                build_progress_frame(
+                    len(urls),
+                    set(),
+                    set(),
+                    urls,
+                    parallelism,
+                    0.0,
                 )
-            results[index] = result
-            done += 1
+            )
 
-            host = urlparse(result.url).netloc or result.url
-            with lock:
-                print(f"[{done:>4}/{len(urls)}] {status_label(result):<22} {host}")
+        with ThreadPoolExecutor(max_workers=parallelism) as executor:
+            futures = {
+                executor.submit(check_one, i): i
+                for i in range(len(urls))
+            }
+
+            for future in as_completed(futures):
+                index = futures[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    result = Result(
+                        index=index,
+                        url=urls[index],
+                        status=STATUS_BAD,
+                        reason=f"Beklenmeyen hata ({type(exc).__name__})",
+                    )
+                results[index] = result
+                done += 1
+
+                with state_lock:
+                    completed_indices.add(index)
+
+                if not live:
+                    host = display_host(result.url)
+                    print(
+                        f"[{done:>4}/{len(urls)}] "
+                        f"{status_label(result):<22} {host}"
+                    )
+    finally:
+        render_stop.set()
+        if live:
+            render_thread.join(timeout=2)
+
+    if live:
+        sys.stdout.write("\033[2J\033[H")
+        sys.stdout.flush()
 
     elapsed = time.monotonic() - started
     final_results = [r for r in results if r is not None]
@@ -996,8 +1158,8 @@ def main() -> None:
         print(f"   • {filename:<22} {counts[status]} adet")
     print(f"   • {'ozet.txt':<22} özet")
     print(f"📁 Panel klasörü  : {PANEL_DIR}")
-    print(f"   • {PANEL_FILE:<22} {panel_stats['panels_added']} yeni, {panel_stats['panels_skipped']} mevcut")
-    print(f"   • {USERPASS_FILE:<22} {panel_stats['userpass_added']} yeni, {panel_stats['userpass_skipped']} mevcut")
+    print(f"   • {PANEL_FILE:<22} {panel_stats['panels_added']} yeni, {panel_stats['panels_skipped']} tekrar")
+    print(f"   • {USERPASS_FILE:<22} {panel_stats['userpass_added']} yeni, {panel_stats['userpass_skipped']} tekrar")
     print(f"   • {SAME_USERPASS_FILE:<22} {panel_stats['same_groups']} grup")
     print("═══════════════════════════════")
 

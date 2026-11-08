@@ -193,6 +193,38 @@ class IPTVCheckerTests(unittest.TestCase):
                 panels,
             )
 
+    def test_progress_frame(self):
+        urls = [
+            f"http://panel{i}.example:8080/get.php?username=u{i}&password=p{i}"
+            for i in range(1, 21)
+        ]
+        frame = checker.build_progress_frame(
+            total=20,
+            completed={0, 1, 2, 3, 4},
+            started={0, 1, 2, 3, 4, 5, 6, 7, 8},
+            urls=urls,
+            parallelism=5,
+            elapsed=42.5,
+        )
+
+        self.assertIn("Tamamlanan   : 5", frame)
+        self.assertIn("Kalan        : 15", frame)
+        self.assertIn("#6, #7, #8, #9", frame)
+        self.assertIn("Sıradaki 10:", frame)
+        self.assertIn("[   10/20] panel10.example:8080", frame)
+        self.assertIn("█", frame)
+        self.assertIn("░", frame)
+
+    def test_format_duration_and_host(self):
+        self.assertEqual(checker.format_duration(0), "00:00:00")
+        self.assertEqual(checker.format_duration(3725), "01:02:05")
+        self.assertEqual(
+            checker.display_host(
+                "http://panel.example:8080/get.php?username=x&password=y"
+            ),
+            "panel.example:8080",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
