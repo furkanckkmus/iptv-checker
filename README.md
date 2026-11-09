@@ -18,7 +18,7 @@
 ---
 
 > [!IMPORTANT]
-> **Güvenlik önce gelir:** `input.txt`, `sonuclar/` ve `paneller/` gerçek kullanıcı adı/şifre içerebilir. Bu dosyalar `.gitignore` ile korunur ve repoya **asla** eklenmemelidir. Depodaki `examples/` klasöründe yalnızca **tamamen sahte** örnekler bulunur.
+> **Güvenlik önce gelir:** Gerçek kullanıcı adı/şifre içeren `input.txt`, `sonuclar/` ve `paneller/` repoya **asla** eklenmemelidir. Deponun kök dizinindeki `input.txt` yalnızca **tamamen sahte** bir örnek girdidir; `examples/` altındaki dosyalar da sahtedir.
 
 ## 🌟 Neden IPTV Checker?
 
@@ -71,8 +71,8 @@ pip install -r requirements.txt
 
 ## ⚡ Hızlı Başlangıç
 
-1. `examples/input.example.txt` dosyasını `input.txt` olarak kopyalayın.
-2. Gerçek playlist adreslerinizi `input.txt` içine yazın.
+1. Depoda hazır gelen sahte `input.txt` dosyasını kendi playlist adreslerinizle değiştirin.
+2. İsterseniz `examples/input.example.txt` dosyasını da temel alabilirsiniz.
 3. Programı çalıştırın:
 
 ```bash
@@ -348,9 +348,10 @@ Testler **gerçek IPTV adreslerine istek atmaz**.
 ## 🛡️ Güvenlik
 
 > [!WARNING]
-> `input.txt`, `sonuclar/` ve `paneller/` gerçek kullanıcı adı/şifre içerebilir. Bu dosyaları Git'e eklemeyin, GitHub'a push etmeyin veya üçüncü kişilerle paylaşmayın.
+> Gerçek kullanıcı adı/şifre içeren `input.txt`, `sonuclar/` ve `paneller/` dosyalarını Git'e eklemeyin, GitHub'a push etmeyin veya üçüncü kişilerle paylaşmayın. Depodaki kök `input.txt` yalnızca sahte örnek girdidir; gerçek bilgilerinizi bu dosyaya yazıp commit etmeyin.
 
-- `.gitignore` bu dosyaları varsayılan olarak hariç tutar.
+- `.gitignore` gerçek veri klasörlerini varsayılan olarak hariç tutar.
+- Kök `input.txt` bilinçli olarak sahte örnek içerikle takip edilir; yerel kullanımda üzerine yazılan gerçek adresler commit edilmemelidir.
 - Paylaşacağınız ekran görüntülerinde URL'leri ve kullanıcı bilgilerini maskeleyin.
 - Yanlışlıkla gizli bilgi commit ederseniz, ilgili hesapların şifrelerini değiştirin.
 - Bu araç yayın içeriğini indirmez, kaydetmez veya DRM korumasını aşmaz.
@@ -403,7 +404,7 @@ Projeyi faydalı bulduysanız:
 [![Tests](https://img.shields.io/badge/Tests-11%20passed-16a34a?style=for-the-badge)](#-tests)
 
 > [!IMPORTANT]
-> **Security first:** `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. They are excluded by `.gitignore` and must never be committed. All files under `examples/` are completely fake.
+> **Security first:** `input.txt`, `sonuclar/`, and `paneller/` files containing real credentials must never be committed. The root `input.txt` in this repository is a completely fake sample; all files under `examples/` are fake as well.
 
 ## ✨ Why IPTV Checker?
 
@@ -445,8 +446,7 @@ pip install -r requirements.txt
 ## ⚡ Quick Start
 
 ```bash
-cp examples/input.example.txt input.txt
-# Add your own playlist URLs to input.txt
+# Replace the fake sample input.txt with your own playlist URLs
 python iptv_checker.py
 ```
 
@@ -687,9 +687,10 @@ Coverage:
 ## 🛡️ Security
 
 > [!WARNING]
-> `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. Never commit, push, or share these files.
+> `input.txt`, `sonuclar/`, and `paneller/` files with real credentials must never be committed, pushed, or shared. The root `input.txt` is a fake sample; do not commit your real addresses into it.
 
-- `.gitignore` excludes them by default.
+- `.gitignore` excludes real-data folders by default.
+- The root `input.txt` is intentionally tracked with fake sample content; never commit real addresses written over it locally.
 - Redact URLs and credentials in screenshots.
 - If you accidentally commit secrets, rotate the affected passwords.
 - This tool does not download, store, or bypass DRM on any content.

@@ -1,0 +1,27 @@
+# Örnek girdi dosyası / Sample input file
+# Buradaki tüm adresler, kullanıcı adları ve şifreler tamamen sahtedir.
+# All addresses, usernames, and passwords below are completely fake.
+#
+# Kullanım / Usage:
+#   python iptv_checker.py
+#   python iptv_checker.py input.txt sonuclar
+#
+# Her satıra bir playlist adresi yazın. / Put one playlist URL per line.
+
+# --- M3U Plus panelleri / M3U Plus panels ---
+http://demo-panel.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+http://panel-b.example:2095/get.php?username=test&password=test123&type=m3u_plus
+
+# --- Standart M3U panelleri / Standard M3U panels ---
+http://panel-c.example:8080/get.php?username=user&password=pass456&type=m3u
+http://panel-d.example:25461/get.php?username=deneme&password=deneme789&type=m3u
+
+# --- Doğrudan HLS adresleri / Direct HLS URLs ---
+https://demo-stream.example/live/example.m3u8
+https://stream-b.example/hls/channel1/index.m3u8
+
+# --- Aynı kullanıcı bilgisini kullanan paneller / Panels sharing credentials ---
+http://panel-e.example:8080/get.php?username=demo&password=demo123&type=m3u_plus
+
+# --- Kasıtlı hatalı örnek / Intentionally invalid sample ---
+http://invalid-panel.example:8080/get.php?username=wrong&password=wrong&type=m3u_plus
