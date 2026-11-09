@@ -19,21 +19,50 @@ import shutil
 import sys
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import Counter, deque
+from concurrent.futures import (
+    FIRST_COMPLETED,
+    ThreadPoolExecutor,
+    as_completed,
+    wait,
+)
+from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import urljoin, urlparse, urlsplit
 
 import requests
+
+try:
+    from rich.console import Console
+    from rich.layout import Layout
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.table import Table
+
+    HAS_RICH = True
+except ImportError:
+    HAS_RICH = False
 
 # Windows konsolunda emoji/Türkçe karakter sorununu önle.
 for _stream in (sys.stdout, sys.stderr):
     if hasattr(_stream, "reconfigure"):
         _stream.reconfigure(encoding="utf-8", errors="replace")
 
-CONNECT_TIMEOUT = 5
-PLAYLIST_READ_TIMEOUT = 10
-STREAM_READ_TIMEOUT = 8
+CONNECT_TIMEOUT = 20
+PLAYLIST_READ_TIMEOUT = 20
+STREAM_READ_TIMEOUT = 20
+
+DEFAULT_PARALLELISM = 20
+HOST_TASK_LIMIT = 4
+HOST_HTTP_LIMIT = 6
 
 MAX_PLAYLIST_LINES = 500
 MAX_PLAYLIST_BYTES = 4 * 1024 * 1024
@@ -52,6 +81,51 @@ STATUS_HEALTHY = "SAĞLIKLI"
 STATUS_WEAK = "ZAYIF"
 STATUS_NONE = "YAYIN YOK"
 STATUS_BAD = "PLAYLIST HATALI"
+
+
+class HostLimiter:
+    """Aynı host:port için eşzamanlı HTTP isteği sayısını sınırlar."""
+
+    def __init__(self, limit: int = HOST_HTTP_LIMIT) -> None:
+        self._limit = limit
+        self._lock = threading.Lock()
+        self._semaphores: dict[str, threading.BoundedSemaphore] = {}
+
+    def _semaphore(self, host: str) -> threading.BoundedSemaphore:
+        with self._lock:
+            semaphore = self._semaphores.get(host)
+            if semaphore is None:
+                semaphore = threading.BoundedSemaphore(self._limit)
+                self._semaphores[host] = semaphore
+            return semaphore
+
+    @contextmanager
+    def limit(self, url: str):
+        host = urlsplit(url).netloc.lower()
+        semaphore = self._semaphore(host)
+        with semaphore:
+            yield
+
+
+HOST_LIMITER = HostLimiter(HOST_HTTP_LIMIT)
+
+_SHARED_ADAPTER = requests.adapters.HTTPAdapter(
+    pool_connections=20,
+    pool_maxsize=50,
+    max_retries=0,
+)
+_SESSION_LOCAL = threading.local()
+
+
+def get_session() -> requests.Session:
+    session = getattr(_SESSION_LOCAL, "session", None)
+    if session is None:
+        session = requests.Session()
+        session.headers.update(HEADERS)
+        session.mount("http://", _SHARED_ADAPTER)
+        session.mount("https://", _SHARED_ADAPTER)
+        _SESSION_LOCAL.session = session
+    return session
 
 
 @dataclass
@@ -80,6 +154,7 @@ class Result:
     reason: str = ""
     elapsed: float = 0.0
     playlist_opened: bool = False
+    timed_out: bool = False
     channels: list[ChannelResult] = field(default_factory=list)
 
 
@@ -171,48 +246,49 @@ def read_input(path: Path) -> tuple[list[str], int, int]:
 def fetch_playlist(url: str) -> tuple[list[str], int | None, str]:
     """Playlist'in sadece ilk MAX_PLAYLIST_LINES satırını indirir."""
     try:
-        with requests.get(
-            url,
-            headers=HEADERS,
-            timeout=(CONNECT_TIMEOUT, PLAYLIST_READ_TIMEOUT),
-            stream=True,
-            allow_redirects=True,
-        ) as response:
-            code = response.status_code
-            content_type = response.headers.get("Content-Type", "").lower()
+        with HOST_LIMITER.limit(url):
+            with get_session().get(
+                url,
+                headers=HEADERS,
+                timeout=(CONNECT_TIMEOUT, PLAYLIST_READ_TIMEOUT),
+                stream=True,
+                allow_redirects=True,
+            ) as response:
+                code = response.status_code
+                content_type = response.headers.get("Content-Type", "").lower()
 
-            if code != 200:
-                return [], code, f"HTTP {code}"
+                if code != 200:
+                    return [], code, f"HTTP {code}"
 
-            lines: list[str] = []
-            total_bytes = 0
+                lines: list[str] = []
+                total_bytes = 0
 
-            for raw in response.iter_lines(decode_unicode=False):
-                if raw is None:
-                    continue
+                for raw in response.iter_lines(decode_unicode=False):
+                    if raw is None:
+                        continue
 
-                total_bytes += len(raw)
-                if total_bytes > MAX_PLAYLIST_BYTES:
-                    break
+                    total_bytes += len(raw)
+                    if total_bytes > MAX_PLAYLIST_BYTES:
+                        break
 
-                line = raw.decode("utf-8", errors="replace").strip().lstrip("\ufeff")
-                if not line:
-                    continue
+                    line = raw.decode("utf-8", errors="replace").strip().lstrip("\ufeff")
+                    if not line:
+                        continue
 
-                lines.append(line)
-                if len(lines) >= MAX_PLAYLIST_LINES:
-                    break
+                    lines.append(line)
+                    if len(lines) >= MAX_PLAYLIST_LINES:
+                        break
 
-            if not lines:
-                return [], code, "Boş yanıt"
+                if not lines:
+                    return [], code, "Boş yanıt"
 
-            if lines[0].startswith("#EXTM3U"):
-                return lines, code, ""
+                if lines[0].startswith("#EXTM3U"):
+                    return lines, code, ""
 
-            if "text/html" in content_type or lines[0].startswith("<"):
-                return [], code, "HTML yanıtı (geçerli M3U değil)"
+                if "text/html" in content_type or lines[0].startswith("<"):
+                    return [], code, "HTML yanıtı (geçerli M3U değil)"
 
-            return [], code, "M3U başlığı yok"
+                return [], code, "M3U başlığı yok"
 
     except requests.Timeout:
         return [], None, "Zaman aşımı"
@@ -264,31 +340,32 @@ def select_channels(channels: list[Channel]) -> list[Channel]:
 
 def fetch_manifest_text(url: str) -> tuple[str, str]:
     try:
-        with requests.get(
-            url,
-            headers=HEADERS,
-            timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
-            stream=True,
-            allow_redirects=True,
-        ) as response:
-            if response.status_code != 200:
-                return "", f"HTTP {response.status_code}"
+        with HOST_LIMITER.limit(url):
+            with get_session().get(
+                url,
+                headers=HEADERS,
+                timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
+                stream=True,
+                allow_redirects=True,
+            ) as response:
+                if response.status_code != 200:
+                    return "", f"HTTP {response.status_code}"
 
-            chunks: list[bytes] = []
-            total = 0
-            for chunk in response.iter_content(chunk_size=8192):
-                if not chunk:
-                    continue
-                chunks.append(chunk)
-                total += len(chunk)
-                if total >= MAX_MANIFEST_BYTES:
-                    break
+                chunks: list[bytes] = []
+                total = 0
+                for chunk in response.iter_content(chunk_size=8192):
+                    if not chunk:
+                        continue
+                    chunks.append(chunk)
+                    total += len(chunk)
+                    if total >= MAX_MANIFEST_BYTES:
+                        break
 
-            data = b"".join(chunks)
-            if not data:
-                return "", "Boş yanıt"
+                data = b"".join(chunks)
+                if not data:
+                    return "", "Boş yanıt"
 
-            return data.decode("utf-8", errors="replace"), ""
+                return data.decode("utf-8", errors="replace"), ""
 
     except requests.Timeout:
         return "", "Zaman aşımı"
@@ -298,27 +375,28 @@ def fetch_manifest_text(url: str) -> tuple[str, str]:
 
 def probe_segment(url: str) -> tuple[bool, str]:
     try:
-        with requests.get(
-            url,
-            headers=HEADERS,
-            timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
-            stream=True,
-            allow_redirects=True,
-        ) as response:
-            if response.status_code != 200:
-                return False, f"HTTP {response.status_code}"
+        with HOST_LIMITER.limit(url):
+            with get_session().get(
+                url,
+                headers=HEADERS,
+                timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
+                stream=True,
+                allow_redirects=True,
+            ) as response:
+                if response.status_code != 200:
+                    return False, f"HTTP {response.status_code}"
 
-            content_type = response.headers.get("Content-Type", "").lower()
-            data = next(response.iter_content(MAX_PROBE_BYTES), b"")
+                content_type = response.headers.get("Content-Type", "").lower()
+                data = next(response.iter_content(MAX_PROBE_BYTES), b"")
 
-            if not data:
-                return False, "Veri gelmedi"
-            if is_html_response(data, content_type):
-                return False, "HTML yanıtı"
-            if not looks_like_media(data, content_type):
-                return False, "Medya verisi değil"
+                if not data:
+                    return False, "Veri gelmedi"
+                if is_html_response(data, content_type):
+                    return False, "HTML yanıtı"
+                if not looks_like_media(data, content_type):
+                    return False, "Medya verisi değil"
 
-            return True, ""
+                return True, ""
 
     except requests.Timeout:
         return False, "Zaman aşımı"
@@ -377,33 +455,34 @@ def probe_hls_text(manifest: str, base_url: str, depth: int = 0) -> tuple[bool, 
 
 
 def probe_channel(url: str) -> tuple[bool, str]:
+    manifest_text: str | None = None
+
     try:
-        with requests.get(
-            url,
-            headers=HEADERS,
-            timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
-            stream=True,
-            allow_redirects=True,
-        ) as response:
-            if response.status_code != 200:
-                return False, f"HTTP {response.status_code}"
+        with HOST_LIMITER.limit(url):
+            with get_session().get(
+                url,
+                headers=HEADERS,
+                timeout=(CONNECT_TIMEOUT, STREAM_READ_TIMEOUT),
+                stream=True,
+                allow_redirects=True,
+            ) as response:
+                if response.status_code != 200:
+                    return False, f"HTTP {response.status_code}"
 
-            content_type = response.headers.get("Content-Type", "").lower()
-            data = next(response.iter_content(MAX_PROBE_BYTES), b"")
+                content_type = response.headers.get("Content-Type", "").lower()
+                data = next(response.iter_content(MAX_PROBE_BYTES), b"")
 
-            if not data:
-                return False, "Veri gelmedi"
+                if not data:
+                    return False, "Veri gelmedi"
 
-            if data.lstrip().startswith(b"#EXTM3U"):
-                manifest = data.decode("utf-8", errors="replace")
-                return probe_hls_text(manifest, url)
-
-            if is_html_response(data, content_type):
-                return False, "HTML yanıtı"
-            if not looks_like_media(data, content_type):
-                return False, "Medya verisi değil"
-
-            return True, ""
+                if data.lstrip().startswith(b"#EXTM3U"):
+                    manifest_text = data.decode("utf-8", errors="replace")
+                else:
+                    if is_html_response(data, content_type):
+                        return False, "HTML yanıtı"
+                    if not looks_like_media(data, content_type):
+                        return False, "Medya verisi değil"
+                    return True, ""
 
     except requests.Timeout:
         return False, "Zaman aşımı"
@@ -411,6 +490,12 @@ def probe_channel(url: str) -> tuple[bool, str]:
         return False, f"Bağlantı hatası ({type(exc).__name__})"
     except Exception as exc:
         return False, f"Hata ({type(exc).__name__})"
+
+    # HLS zinciri kendi isteklerini yapar; host kilidi burada bırakılmış olmalı.
+    if manifest_text is not None:
+        return probe_hls_text(manifest_text, url)
+
+    return False, "Bilinmeyen yayın yanıtı"
 
 
 # ---------------------------------------------------------------------------
@@ -429,6 +514,7 @@ def check_source(index: int, url: str) -> Result:
             http_code=code,
             reason=error,
             elapsed=time.monotonic() - started,
+            timed_out="Zaman aşımı" in error,
         )
 
     # Doğrudan HLS adresi: playlist değil, tek yayın olarak kontrol et.
@@ -447,6 +533,7 @@ def check_source(index: int, url: str) -> Result:
             reason=reason,
             elapsed=time.monotonic() - started,
             playlist_opened=True,
+            timed_out="Zaman aşımı" in reason,
             channels=[ChannelResult(channel=channel, ok=ok, reason=reason)],
         )
 
@@ -498,6 +585,7 @@ def check_source(index: int, url: str) -> Result:
         working=working,
         elapsed=time.monotonic() - started,
         playlist_opened=True,
+        timed_out=any("Zaman aşımı" in cr.reason for cr in channel_results),
         channels=channel_results,
     )
 
@@ -546,10 +634,12 @@ def build_category_report(
     status: str,
     results: list[Result],
     input_path: Path,
+    run_stamp: str,
 ) -> str:
     lines: list[str] = []
     lines.append(f"IPTV CHECKER - {status}")
     lines.append("=" * 70)
+    lines.append(f"Tarama       : {run_stamp}")
     lines.append(f"Girdi dosyası: {input_path}")
     lines.append(f"Adet: {len(results)}")
     lines.append("")
@@ -575,7 +665,7 @@ def build_summary(
     skipped: int,
     duplicates: int,
     elapsed: float,
-    output_dir: Path,
+    run_dir: Path,
 ) -> str:
     counts = {
         STATUS_HEALTHY: 0,
@@ -589,8 +679,9 @@ def build_summary(
     lines: list[str] = []
     lines.append("IPTV CHECKER - ÖZET")
     lines.append("=" * 70)
+    lines.append(f"Tarama         : {run_dir.name}")
     lines.append(f"Girdi dosyası  : {input_path}")
-    lines.append(f"Çıktı klasörü  : {output_dir}")
+    lines.append(f"Çıktı klasörü  : {run_dir}")
     lines.append(f"Toplam satır   : {total_lines}")
     lines.append(f"Tekrar (atıldı): {duplicates}")
     lines.append(f"Geçersiz satır : {skipped}")
@@ -605,10 +696,23 @@ def build_summary(
     lines.append("")
     lines.append("DOSYALAR")
     for status, filename in CATEGORY_FILES.items():
-        lines.append(f"{filename:<22}: {counts[status]} adet")
+        lines.append(f"{filename:<40}: {counts[status]} adet")
+    lines.append(f"{'ozet.txt':<40}: özet")
     lines.append("")
 
     return "\n".join(lines)
+
+
+def make_run_folder(output_dir: Path) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    base = datetime.now().strftime("%Y-%m-%d-%H-%M")
+    folder = output_dir / base
+    counter = 2
+    while folder.exists():
+        folder = output_dir / f"{base}_{counter}"
+        counter += 1
+    folder.mkdir(parents=True)
+    return folder
 
 
 def write_reports(
@@ -619,8 +723,9 @@ def write_reports(
     skipped: int,
     duplicates: int,
     elapsed: float,
-) -> dict[str, int]:
-    output_dir.mkdir(parents=True, exist_ok=True)
+) -> tuple[dict[str, int], Path]:
+    run_dir = make_run_folder(output_dir)
+    run_stamp = run_dir.name
 
     counts = {
         STATUS_HEALTHY: 0,
@@ -633,8 +738,8 @@ def write_reports(
 
     for status, filename in CATEGORY_FILES.items():
         group = [r for r in results if r.status == status]
-        report = build_category_report(status, group, input_path)
-        (output_dir / filename).write_text(report, encoding="utf-8")
+        report = build_category_report(status, group, input_path, run_stamp)
+        (run_dir / filename).write_text(report, encoding="utf-8")
 
     summary = build_summary(
         results,
@@ -643,11 +748,11 @@ def write_reports(
         skipped,
         duplicates,
         elapsed,
-        output_dir,
+        run_dir,
     )
-    (output_dir / "ozet.txt").write_text(summary, encoding="utf-8")
+    (run_dir / "ozet.txt").write_text(summary, encoding="utf-8")
 
-    return counts
+    return counts, run_dir
 
 
 # ---------------------------------------------------------------------------
@@ -879,7 +984,7 @@ def save_panel_records(
 # ---------------------------------------------------------------------------
 
 def ask_parallelism() -> int:
-    default = 5
+    default = DEFAULT_PARALLELISM
     while True:
         try:
             raw = input(f"Aynı anda kontrol edilecek playlist sayısı (varsayılan {default}): ").strip()
@@ -927,9 +1032,175 @@ def format_duration(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
+def compute_speed_eta(
+    done: int,
+    total: int,
+    elapsed: float,
+    p90_done: int | None,
+    p90_time: float | None,
+    now: float,
+) -> tuple[float, str, str]:
+    """%90 sonrası gerçek hızı, ondan önce ortalama hızı kullanır."""
+    remaining = max(0, total - done)
+
+    if (
+        p90_done is not None
+        and p90_time is not None
+        and done > p90_done
+        and now > p90_time
+    ):
+        speed = (done - p90_done) / (now - p90_time)
+        speed_label = "90%+"
+    else:
+        speed = done / elapsed if elapsed > 0 else 0.0
+        speed_label = "ort."
+
+    if remaining == 0:
+        eta_text = "00:00:00"
+    elif speed > 0:
+        eta_text = format_duration(remaining / speed)
+    else:
+        eta_text = "--:--:--"
+
+    return speed, eta_text, speed_label
+
+
 def display_host(url: str) -> str:
     parsed = urlparse(url)
     return parsed.netloc or url
+
+
+class RichDashboard:
+    """rich ile canlı ilerleme, sayaçlar ve son çalışanlar paneli."""
+
+    def __init__(self, total: int, parallelism: int, host_limit: int) -> None:
+        self.total = total
+        self.parallelism = parallelism
+        self.host_limit = host_limit
+        self.console = Console()
+        self.progress = Progress(
+            TextColumn("[bold cyan]{task.description}"),
+            BarColumn(bar_width=None),
+            TextColumn("[progress.percentage]{task.percentage:>5.1f}%"),
+            TextColumn("({task.completed}/{task.total})"),
+            TimeElapsedColumn(),
+            console=self.console,
+            expand=True,
+        )
+        self.task = self.progress.add_task("İlerleme", total=total)
+        self.layout = Layout()
+        self.layout.split_column(
+            Layout(name="header", size=3),
+            Layout(name="info", size=5),
+            Layout(name="progress", size=3),
+            Layout(name="stats", size=3),
+            Layout(name="working", ratio=1),
+        )
+        self.layout["header"].update(
+            Panel.fit("[bold cyan]📺 IPTV CHECKER[/]", border_style="cyan")
+        )
+        self.live = Live(
+            self.layout,
+            console=self.console,
+            refresh_per_second=2,
+            transient=False,
+        )
+        self.live.start(refresh=True)
+
+    @staticmethod
+    def _indices_text(indices: list[int], limit: int = 8) -> str:
+        parts = [f"#{index + 1}" for index in indices[:limit]]
+        if len(indices) > limit:
+            parts.append(f"+{len(indices) - limit}")
+        return ", ".join(parts) if parts else "-"
+
+    def update(
+        self,
+        done: int,
+        status_counts: Counter[str],
+        timed_out_count: int,
+        recent_working: deque[Result],
+        current: list[int],
+        elapsed: float,
+        p90_done: int | None = None,
+        p90_time: float | None = None,
+        now: float | None = None,
+    ) -> None:
+        self.progress.update(self.task, completed=done)
+
+        remaining = max(0, self.total - done)
+        percent = (done / self.total * 100) if self.total else 0.0
+        speed, eta_text, speed_label = compute_speed_eta(
+            done,
+            self.total,
+            elapsed,
+            p90_done,
+            p90_time,
+            now if now is not None else time.monotonic(),
+        )
+
+        info = Table.grid(expand=True)
+        for _ in range(3):
+            info.add_column(justify="left", ratio=1)
+        info.add_row(
+            f"📡 Toplam: [bold]{self.total}[/]",
+            f"✅ Tamamlanan: [bold]{done}[/] (%{percent:.1f})",
+            f"⏳ Kalan: [bold]{remaining}[/]",
+        )
+        info.add_row(
+            f"🔄 Paralel: [bold]{self.parallelism}[/]",
+            f"🏠 Host limiti: [bold]{self.host_limit}[/]",
+            f"⏱️  Süre: [bold]{format_duration(elapsed)}[/]",
+        )
+        info.add_row(
+            f"🚀 Hız ({speed_label}): [bold]{speed:.2f}[/] işlem/sn",
+            f"🕒 Tahmini: [bold]{eta_text}[/]",
+            f"🎯 Şu an: {self._indices_text(current)}",
+        )
+
+        stats = Table.grid(expand=True)
+        for _ in range(3):
+            stats.add_column(justify="center")
+        stats.add_row(
+            f"[green]✅ Sağlıklı: {status_counts[STATUS_HEALTHY]}[/]",
+            f"[yellow]⚠️  Zayıf: {status_counts[STATUS_WEAK]}[/]",
+            f"[red]❌ Yayın yok: {status_counts[STATUS_NONE]}[/]",
+        )
+        stats.add_row(
+            f"[bold red]⛔ Hatalı: {status_counts[STATUS_BAD]}[/]",
+            f"[magenta]⏳ Zaman aşımı: {timed_out_count}[/]",
+            "",
+        )
+
+        working = Table(
+            title="Son çalışanlar (10)",
+            expand=True,
+            border_style="green",
+            show_lines=False,
+        )
+        working.add_column("Durum", width=6, justify="center")
+        working.add_column("Host")
+        working.add_column("Yayın", width=8, justify="right")
+
+        if recent_working:
+            for result in reversed(recent_working):
+                mark = "✅" if result.status == STATUS_HEALTHY else "⚠️"
+                working.add_row(
+                    mark,
+                    display_host(result.url),
+                    f"{result.working}/{result.checked}",
+                )
+        else:
+            working.add_row("", "(henüz çalışan yok)", "")
+
+        self.layout["info"].update(info)
+        self.layout["progress"].update(self.progress)
+        self.layout["stats"].update(stats)
+        self.layout["working"].update(working)
+        self.live.update(self.layout, refresh=True)
+
+    def stop(self) -> None:
+        self.live.stop()
 
 
 def build_progress_frame(
@@ -937,27 +1208,33 @@ def build_progress_frame(
     completed: set[int],
     started: set[int],
     urls: list[str],
+    order: list[int],
     parallelism: int,
+    host_limit: int,
     elapsed: float,
+    p90_done: int | None = None,
+    p90_time: float | None = None,
+    now: float | None = None,
 ) -> str:
     done = len(completed)
     remaining = max(0, total - done)
     percent = (done / total * 100) if total else 0.0
 
     current = sorted(started - completed)
-    pending = [index for index in range(total) if index not in started]
+    pending = [index for index in order if index not in started]
 
     bar_width = 32
     filled = int(bar_width * done / total) if total else bar_width
     bar = "█" * filled + "░" * (bar_width - filled)
 
-    speed = done / elapsed if elapsed > 0 else 0.0
-    if remaining == 0:
-        eta_text = "00:00:00"
-    elif done:
-        eta_text = format_duration(elapsed / done * remaining)
-    else:
-        eta_text = "--:--:--"
+    speed, eta_text, speed_label = compute_speed_eta(
+        done,
+        total,
+        elapsed,
+        p90_done,
+        p90_time,
+        now if now is not None else time.monotonic(),
+    )
 
     def indices_text(indices: list[int], limit: int = 8) -> str:
         parts = [f"#{index + 1}" for index in indices[:limit]]
@@ -978,9 +1255,10 @@ def build_progress_frame(
         f"✅ Tamamlanan   : {done}  (%{percent:.1f})",
         f"⏳ Kalan        : {remaining}",
         f"🔄 Paralel      : {parallelism}",
+        f"🏠 Host limiti  : {host_limit}",
         f"🎯 Şu an        : {indices_text(current)}",
         f"⏱️  Geçen süre   : {format_duration(elapsed)}",
-        f"🚀 Hız          : {speed:.2f} işlem/sn",
+        f"🚀 Hız ({speed_label}) : {speed:.2f} işlem/sn",
         f"🕒 Tahmini süre : {eta_text}",
         f"[{bar}] %{percent:.1f}",
         "─" * width,
@@ -1031,12 +1309,13 @@ def main() -> None:
 
     parallelism = ask_parallelism()
     live = sys.stdout.isatty()
+    use_rich = live and HAS_RICH
 
-    if live:
+    if live and not use_rich:
         enable_ansi()
         sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
-    else:
+    elif not live:
         print(f"\n🚀 Başlıyor ({parallelism} playlist paralel)...\n")
 
     started = time.monotonic()
@@ -1046,6 +1325,19 @@ def main() -> None:
     completed_indices: set[int] = set()
     render_stop = threading.Event()
     done = 0
+    status_counts: Counter[str] = Counter()
+    timed_out_count = 0
+    recent_working: deque[Result] = deque(maxlen=10)
+    dashboard: RichDashboard | None = None
+    p90_done: int | None = None
+    p90_time: float | None = None
+
+    order = list(range(len(urls)))
+    random.shuffle(order)
+    host_of = {
+        index: (urlparse(urls[index]).netloc.lower() or urls[index])
+        for index in range(len(urls))
+    }
 
     def check_one(index: int) -> Result:
         with state_lock:
@@ -1053,24 +1345,53 @@ def main() -> None:
         return check_source(index, urls[index])
 
     def render_loop() -> None:
+        local_p90_done: int | None = None
+        local_p90_time: float | None = None
         while not render_stop.wait(0.5):
             with state_lock:
                 started_snapshot = set(started_indices)
                 completed_snapshot = set(completed_indices)
+            now = time.monotonic()
+            done_snapshot = len(completed_snapshot)
+            if (
+                local_p90_time is None
+                and len(urls)
+                and done_snapshot / len(urls) >= 0.90
+            ):
+                local_p90_time = now
+                local_p90_done = done_snapshot
             frame = build_progress_frame(
                 len(urls),
                 completed_snapshot,
                 started_snapshot,
                 urls,
+                order,
                 parallelism,
-                time.monotonic() - started,
+                HOST_TASK_LIMIT,
+                now - started,
+                local_p90_done,
+                local_p90_time,
+                now,
             )
             draw_progress(frame)
 
     render_thread = threading.Thread(target=render_loop, daemon=True)
 
     try:
-        if live:
+        if use_rich:
+            dashboard = RichDashboard(len(urls), parallelism, HOST_TASK_LIMIT)
+            dashboard.update(
+                0,
+                status_counts,
+                0,
+                recent_working,
+                [],
+                0.0,
+                None,
+                None,
+                time.monotonic(),
+            )
+        elif live:
             render_thread.start()
             draw_progress(
                 build_progress_frame(
@@ -1078,53 +1399,153 @@ def main() -> None:
                     set(),
                     set(),
                     urls,
+                    order,
                     parallelism,
+                    HOST_TASK_LIMIT,
                     0.0,
+                    None,
+                    None,
+                    time.monotonic(),
                 )
             )
 
         with ThreadPoolExecutor(max_workers=parallelism) as executor:
-            futures = {
-                executor.submit(check_one, i): i
-                for i in range(len(urls))
-            }
+            pending = deque(order)
+            running = {}
+            host_counts: Counter[str] = Counter()
 
-            for future in as_completed(futures):
-                index = futures[future]
-                try:
-                    result = future.result()
-                except Exception as exc:
-                    result = Result(
-                        index=index,
-                        url=urls[index],
-                        status=STATUS_BAD,
-                        reason=f"Beklenmeyen hata ({type(exc).__name__})",
-                    )
-                results[index] = result
-                done += 1
+            def fill_slots() -> int:
+                submitted = 0
+                examined = 0
+                initial_len = len(pending)
+                blocked = deque()
 
-                with state_lock:
-                    completed_indices.add(index)
+                while (
+                    pending
+                    and len(running) < parallelism
+                    and examined < initial_len
+                ):
+                    index = pending.popleft()
+                    examined += 1
+                    host = host_of[index]
 
-                if not live:
-                    host = display_host(result.url)
-                    print(
-                        f"[{done:>4}/{len(urls)}] "
-                        f"{status_label(result):<22} {host}"
+                    if host_counts[host] >= HOST_TASK_LIMIT:
+                        blocked.append(index)
+                        continue
+
+                    future = executor.submit(check_one, index)
+                    running[future] = index
+                    host_counts[host] += 1
+                    submitted += 1
+
+                pending.extend(blocked)
+                return submitted
+
+            while pending or running:
+                fill_slots()
+                if not running:
+                    break
+
+                finished, _ = wait(
+                    running,
+                    timeout=0.5,
+                    return_when=FIRST_COMPLETED,
+                )
+                for future in finished:
+                    index = running.pop(future)
+                    host = host_of[index]
+                    host_counts[host] -= 1
+
+                    try:
+                        result = future.result()
+                    except Exception as exc:
+                        result = Result(
+                            index=index,
+                            url=urls[index],
+                            status=STATUS_BAD,
+                            reason=f"Beklenmeyen hata ({type(exc).__name__})",
+                        )
+
+                    results[index] = result
+                    done += 1
+                    status_counts[result.status] += 1
+                    if result.timed_out:
+                        timed_out_count += 1
+                    if result.status in (STATUS_HEALTHY, STATUS_WEAK):
+                        recent_working.append(result)
+
+                    with state_lock:
+                        completed_indices.add(index)
+
+                    if not live:
+                        host_name = display_host(result.url)
+                        print(
+                            f"[{done:>4}/{len(urls)}] "
+                            f"{status_label(result):<22} {host_name}"
+                        )
+
+                if dashboard is not None:
+                    with state_lock:
+                        current_snapshot = sorted(
+                            started_indices - completed_indices
+                        )
+                    now = time.monotonic()
+                    if (
+                        p90_time is None
+                        and len(urls)
+                        and done / len(urls) >= 0.90
+                    ):
+                        p90_time = now
+                        p90_done = done
+                    dashboard.update(
+                        done,
+                        status_counts,
+                        timed_out_count,
+                        recent_working,
+                        current_snapshot,
+                        now - started,
+                        p90_done,
+                        p90_time,
+                        now,
                     )
     finally:
         render_stop.set()
-        if live:
+        if live and not use_rich:
             render_thread.join(timeout=2)
+        if dashboard is not None:
+            with state_lock:
+                current_snapshot = sorted(
+                    started_indices - completed_indices
+                )
+            now = time.monotonic()
+            if (
+                p90_time is None
+                and len(urls)
+                and done / len(urls) >= 0.90
+            ):
+                p90_time = now
+                p90_done = done
+            dashboard.update(
+                done,
+                status_counts,
+                timed_out_count,
+                recent_working,
+                current_snapshot,
+                now - started,
+                p90_done,
+                p90_time,
+                now,
+            )
+            dashboard.stop()
 
-    if live:
+    if live and not use_rich:
         sys.stdout.write("\033[2J\033[H")
         sys.stdout.flush()
 
     elapsed = time.monotonic() - started
     final_results = [r for r in results if r is not None]
 
-    counts = write_reports(
+    counts, run_dir = write_reports(
         output_dir,
         final_results,
         input_path,
@@ -1153,7 +1574,8 @@ def main() -> None:
     print(f"❌ Yayın yok      : {counts[STATUS_NONE]}")
     print(f"⛔ Playlist hatalı: {counts[STATUS_BAD]}")
     print(f"⏱️  Toplam süre    : {elapsed:.1f} sn")
-    print(f"📁 Klasör         : {output_dir}")
+    print(f"📁 Klasör         : {run_dir}")
+    print(f"🕒 Tarama         : {run_dir.name}")
     for status, filename in CATEGORY_FILES.items():
         print(f"   • {filename:<22} {counts[status]} adet")
     print(f"   • {'ozet.txt':<22} özet")

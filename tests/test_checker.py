@@ -203,17 +203,89 @@ class IPTVCheckerTests(unittest.TestCase):
             completed={0, 1, 2, 3, 4},
             started={0, 1, 2, 3, 4, 5, 6, 7, 8},
             urls=urls,
+            order=list(range(20)),
             parallelism=5,
+            host_limit=4,
             elapsed=42.5,
         )
 
         self.assertIn("Tamamlanan   : 5", frame)
         self.assertIn("Kalan        : 15", frame)
+        self.assertIn("Host limiti  : 4", frame)
         self.assertIn("#6, #7, #8, #9", frame)
         self.assertIn("Sıradaki 10:", frame)
         self.assertIn("[   10/20] panel10.example:8080", frame)
+        self.assertIn("Hız (ort.)", frame)
         self.assertIn("█", frame)
         self.assertIn("░", frame)
+
+    def test_speed_eta_switches_to_real_rate_after_90_percent(self):
+        speed, eta_text, label = checker.compute_speed_eta(
+            done=95,
+            total=100,
+            elapsed=100.0,
+            p90_done=90,
+            p90_time=90.0,
+            now=100.0,
+        )
+        self.assertEqual(label, "90%+")
+        self.assertAlmostEqual(speed, 0.5)
+        self.assertEqual(eta_text, "00:00:10")
+
+        speed, eta_text, label = checker.compute_speed_eta(
+            done=95,
+            total=100,
+            elapsed=100.0,
+            p90_done=None,
+            p90_time=None,
+            now=100.0,
+        )
+        self.assertEqual(label, "ort.")
+        self.assertAlmostEqual(speed, 0.95)
+
+    def test_run_folders_are_timestamped_and_unique(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "sonuclar"
+            first = checker.make_run_folder(output_dir)
+            second = checker.make_run_folder(output_dir)
+
+            self.assertTrue(first.is_dir())
+            self.assertRegex(first.name, r"^\d{4}-\d{2}-\d{2}-\d{2}-\d{2}$")
+            self.assertTrue(second.is_dir())
+            self.assertTrue(second.name.endswith("_2"))
+
+    def test_reports_use_timestamped_folder_with_plain_names(self):
+        results = [
+            checker.Result(
+                index=0,
+                url="http://p1.example:8080/get.php?username=user1&password=pass1",
+                status=checker.STATUS_HEALTHY,
+                playlist_opened=True,
+            )
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / "sonuclar"
+            counts, run_dir = checker.write_reports(
+                output_dir=output_dir,
+                results=results,
+                input_path=Path("input.txt"),
+                total_lines=1,
+                skipped=0,
+                duplicates=0,
+                elapsed=1.5,
+            )
+
+            self.assertEqual(counts[checker.STATUS_HEALTHY], 1)
+            self.assertEqual(run_dir.parent, output_dir)
+            for name in (
+                "saglikli.txt",
+                "zayif.txt",
+                "yayin_yok.txt",
+                "playlist_hatali.txt",
+                "ozet.txt",
+            ):
+                self.assertTrue((run_dir / name).is_file(), name)
+            self.assertIn("Tarama", (run_dir / "ozet.txt").read_text(encoding="utf-8"))
 
     def test_format_duration_and_host(self):
         self.assertEqual(checker.format_duration(0), "00:00:00")

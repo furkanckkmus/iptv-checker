@@ -6,8 +6,9 @@
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Requests](https://img.shields.io/badge/Requests-2.x-2C5BB4?style=for-the-badge)](https://requests.readthedocs.io/)
+[![Rich](https://img.shields.io/badge/Rich-13%2B-ff69b4?style=for-the-badge)](https://rich.readthedocs.io/)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-8%20passed-16a34a?style=for-the-badge)](#-testler)
+[![Tests](https://img.shields.io/badge/Tests-11%20passed-16a34a?style=for-the-badge)](#-testler)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](#-kurulum)
 
 [Öne Çıkanlar](#-öne-çıkanlar) • [Kurulum](#-kurulum) • [Hızlı Başlangıç](#-hızlı-başlangıç) • [Örnek Dosyalar](examples/) • [English](#english)
@@ -36,26 +37,28 @@ Kısacası: **çalışıyor gibi görünen** değil, **gerçekten çalışan** y
 | | Özellik |
 |---|---|
 | ⚡ | **Hız odaklı:** 40 MB'lık playlist'i tamamen indirmez, yalnızca ilk 500 satırı okur. |
-| 🖥️ | **Canlı terminal paneli:** İlerleme, kalan süre, şu an işlenen ve sıradaki 10 adres tek ekranda. |
+| 🖥️ | **Canlı terminal paneli:** İlerleme, durum sayaçları, son 10 çalışan panel ve gerçekçi kalan süre tek ekranda. |
+| 🏠 | **Host farkındalıklı eşzamanlılık:** Aynı paneli yormamak için host başına görev ve HTTP bağlantı limiti. |
+| 🎲 | **Rastgele tarama sırası:** İşler karıştırılarak taranır; raporlar yine `input.txt` sırasını korur. |
 | 🎯 | **Akıllı örnekleme:** İlk 3 yayını sırayla, kalan 2 yayını ilk 500 satırdan rastgele seçer. |
 | 🔍 | **Gerçek doğrulama:** HTTP 200 tek başına yeterli değildir; HLS segmenti veya TS/MP4 medya baytı aranır. |
 | 📊 | **Net raporlar:** `SAĞLIKLI`, `ZAYIF`, `YAYIN YOK`, `PLAYLIST HATALI` olarak ayrı dosyalara yazılır. |
 | 🧾 | **Panel envanteri:** Erişilebilen paneller ve `username:password` kayıtları tutulur. |
 | 🔁 | **Çoklu panel gruplama:** Aynı kullanıcı bilgisi 2+ panelde geçiyorsa `AyniUserpass.txt` ile gruplanır. |
 | 🛡️ | **Güvenlik bilinci:** Gerçek veriler `.gitignore` ile korunur; repoda yalnızca sahte örnekler vardır. |
-| 🧪 | **Test edilmiş:** Yerel mock sunucuyla çalışan 8 otomatik test içerir. |
-| 🪶 | **Hafif:** Tek harici bağımlılık `requests`. |
+| 🧪 | **Test edilmiş:** Yerel mock sunucuyla çalışan 11 otomatik test içerir. |
+| 🪶 | **Hafif:** Yalnızca iki harici bağımlılık: `requests` ve `rich`. |
 
 ## 📦 Hızlı Bakış
 
 | Özellik | Değer |
 |---|---|
 | **Girdi** | `input.txt` — satır başına bir playlist URL'si |
-| **Çıktı** | `sonuclar/` — durumlara göre ayrı TXT dosyaları |
+| **Çıktı** | `sonuclar/<YYYY-MM-DD-HH-MM>/` — her tarama için ayrı klasör |
 | **Panel kayıtları** | `paneller/` — paneller, kullanıcı bilgileri, eşleşmeler |
 | **Dil** | Python 3.10+ |
-| **Bağımlılık** | `requests` |
-| **Test** | 8 yerel test, gerçek ağ bağlantısı gerektirmez |
+| **Bağımlılık** | `requests`, `rich` |
+| **Test** | 11 yerel test, gerçek ağ bağlantısı gerektirmez |
 | **Platform** | Windows, Linux, macOS |
 
 ## 🛠️ Kurulum
@@ -79,7 +82,7 @@ python iptv_checker.py
 Program aynı anda kaç playlist kontrol edileceğini sorar:
 
 ```text
-Aynı anda kontrol edilecek playlist sayısı (varsayılan 5):
+Aynı anda kontrol edilecek playlist sayısı (varsayılan 20):
 ```
 
 İsterseniz yolları komut satırından da verebilirsiniz:
@@ -90,45 +93,34 @@ python iptv_checker.py input.txt sonuclar
 
 ### Canlı terminal gösterimi
 
-Program terminalde çalışırken ekranı 0,5 saniyede bir yeniler. Üst bölümde ilerleme, alt bölümde sıradaki 10 adres gösterilir:
+Program terminalde çalışırken Rich tabanlı gösterge paneli ekranı 0,5 saniyede bir yeniler. İlerleme, durum sayaçları ve son çalışan paneller tek ekranda gösterilir:
 
 ```text
-════════════════════════════════════════════════════════════════════
 📺 IPTV CHECKER
-════════════════════════════════════════════════════════════════════
-📡 Toplam       : 161
-✅ Tamamlanan   : 42  (%26.1)
-⏳ Kalan        : 119
-🔄 Paralel      : 5
-🎯 Şu an        : #43, #44, #45, #46, #47
-⏱️  Geçen süre   : 00:01:24
-🚀 Hız          : 0.50 işlem/sn
-🕒 Tahmini süre : 00:03:58
-[████████████░░░░░░░░░░░░░░░░░░░░] %26.1
-────────────────────────────────────────────────────────────────────
-Sıradaki 10:
-  [   48/161] panel48.example:8080
-  [   49/161] panel49.example:8080
-  [   50/161] panel50.example:8080
-  [   51/161] panel51.example:8080
-  [   52/161] panel52.example:8080
-  [   53/161] panel53.example:8080
-  [   54/161] panel54.example:8080
-  [   55/161] panel55.example:8080
-  [   56/161] panel56.example:8080
-  [   57/161] panel57.example:8080
-────────────────────────────────────────────────────────────────────
+📡 Toplam: 161   ✅ Tamamlanan: 42 (%26.1)   ⏳ Kalan: 119
+🔄 Paralel: 20   🏠 Host limiti: 4           ⏱️  Süre: 00:01:24
+🚀 Hız (ort.): 0.50 işlem/sn  🕒 Tahmini: 00:03:58  🎯 Şu an: #43, #44…
+[██████████░░░░░░░░░░░░░░░░░░░░░░] %26.1
+
+✅ Sağlıklı: 8   ⚠️ Zayıf: 2   ❌ Yayın yok: 5   ⛔ Hatalı: 25   ⏳ Zaman aşımı: 2
+
+Son çalışanlar (10)
+✅ panel-a.example:8080    5/5
+⚠️ panel-b.example:2095    1/5
 ```
 
 Gösterilen bilgiler:
 
-- Toplam, tamamlanan ve kalan işlem sayısı
-- Yüzde ve görsel ilerleme çubuğu
-- Şu an işlenen işlem numaraları
+- Toplam, tamamlanan ve kalan işlem sayısı, yüzde ve ilerleme çubuğu
+- Paralel iş sayısı ve host başına eşzamanlı iş limiti
+- Durum sayaçları: sağlıklı, zayıf, yayın yok, hatalı, zaman aşımı
+- Son 10 çalışan panel (yalnızca `host:port`, kimlik bilgisi değil)
 - Geçen süre, işlem hızı ve tahmini kalan süre
-- Sıradaki 10 adres (yalnızca `host:port`, kimlik bilgisi değil)
+- Şu an işlenen işlem numaraları
 
-> Terminal canlı ekranı desteklemiyorsa veya çıktı bir dosyaya yönlendirilmişse program otomatik olarak satır satır çıktı moduna geçer.
+> Tarama %90'a ulaştığında hız ve kalan süre, son dilimin gerçek hızına göre yeniden hesaplanır; böylece sona kalan yavaş işlerde ETA iyimser görünmez.
+
+> `rich` kurulu değilse veya çıktı bir dosyaya yönlendirilmişse program otomatik olarak satır satır çıktı moduna geçer.
 
 ### Örnek satır satır çıktı
 
@@ -198,16 +190,25 @@ Kurallar:
 
 ## 📁 Çıktı Dosyaları
 
-Tarama sonunda `sonuclar/` klasörü oluşturulur:
+Tarama sonunda her çalıştırma için ayrı, zaman damgalı bir klasör oluşturulur:
 
 ```text
 sonuclar/
-├── saglikli.txt
-├── zayif.txt
-├── yayin_yok.txt
-├── playlist_hatali.txt
-└── ozet.txt
+├── 2026-11-08-23-32/
+│   ├── saglikli.txt
+│   ├── zayif.txt
+│   ├── yayin_yok.txt
+│   ├── playlist_hatali.txt
+│   └── ozet.txt
+├── 2026-11-09-00-15/
+│   └── ...
+└── ...
 ```
+
+- Klasör adı biçimi: `YYYY-MM-DD-HH-MM`
+- Aynı dakika içinde ikinci tarama başlarsa klasör adına `_2`, `_3` eklenir.
+- Önceki taramaların klasörleri korunur; üzerine yazılmaz.
+- Klasör içindeki dosya adları sabittir.
 
 Her kategori dosyası iki bölümden oluşur:
 
@@ -315,8 +316,11 @@ Ayarlar `iptv_checker.py` dosyasının başındaki sabitlerden değiştirilebili
 | `MAX_PLAYLIST_BYTES` | `4 MB` | Okunacak maksimum bayt |
 | `SAMPLE_SIZE` | `5` | Kontrol edilecek yayın sayısı |
 | `MIN_WORKING` | `2` | Sağlıklı sayılmak için gereken çalışan yayın |
+| `DEFAULT_PARALLELISM` | `20` | Soruda önerilen varsayılan paralel iş sayısı |
+| `HOST_TASK_LIMIT` | `4` | Aynı host için eşzamanlı görev limiti |
+| `HOST_HTTP_LIMIT` | `6` | Aynı host için eşzamanlı HTTP bağlantı limiti |
 
-Paralellik program çalışırken sorulur.
+Paralellik program çalışırken sorulur; diğer limit sabitleri kodun başından değiştirilebilir.
 
 ## 🧪 Testler
 
@@ -335,6 +339,8 @@ Test kapsamı:
 - ✅ Panel normalizasyonu
 - ✅ Panel kayıtlarında duplicate engelleme
 - ✅ Canlı terminal gösterge paneli
+- ✅ %90 sonrası gerçek hız / ETA hesabı
+- ✅ Zaman damgalı çıktı klasörleri ve sabit dosya adları
 - ✅ Süre biçimlendirme ve host gösterimi
 
 Testler **gerçek IPTV adreslerine istek atmaz**.
@@ -394,7 +400,7 @@ Projeyi faydalı bulduysanız:
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-8%20passed-16a34a?style=for-the-badge)](#-tests)
+[![Tests](https://img.shields.io/badge/Tests-11%20passed-16a34a?style=for-the-badge)](#-tests)
 
 > [!IMPORTANT]
 > **Security first:** `input.txt`, `sonuclar/`, and `paneller/` may contain real credentials. They are excluded by `.gitignore` and must never be committed. All files under `examples/` are completely fake.
@@ -416,15 +422,17 @@ It finds streams that **actually work**, not streams that merely **look like the
 | | Feature |
 |---|---|
 | ⚡ | **Fast:** Reads only the first 500 lines instead of downloading a 40 MB playlist. |
-| 🖥️ | **Live terminal dashboard:** Progress, ETA, current items, and the next 10 addresses on one screen. |
+| 🖥️ | **Live terminal dashboard:** Progress, status counters, the last 10 working panels, and a realistic ETA on one screen. |
+| 🏠 | **Host-aware concurrency:** Per-host task and HTTP connection limits keep individual panels from being overloaded. |
+| 🎲 | **Random scan order:** Work is shuffled, while reports still keep `input.txt` order. |
 | 🎯 | **Smart sampling:** First 3 streams in order + 2 random streams from the first 500 lines. |
 | 🔍 | **Real validation:** HTTP 200 is not enough; HLS segments or TS/MP4 media bytes are required. |
 | 📊 | **Clear reports:** Separate files for `HEALTHY`, `WEAK`, `NO STREAM`, and `INVALID PLAYLIST`. |
 | 🧾 | **Panel inventory:** Accessible panels and `username:password` records. |
 | 🔁 | **Multi-panel grouping:** Credentials used on 2+ panels are grouped in `AyniUserpass.txt`. |
 | 🛡️ | **Security aware:** Real data is excluded; only fake examples are committed. |
-| 🧪 | **Tested:** 8 automated tests using a local mock server. |
-| 🪶 | **Lightweight:** Only one external dependency: `requests`. |
+| 🧪 | **Tested:** 11 automated tests using a local mock server. |
+| 🪶 | **Lightweight:** Only two external dependencies: `requests` and `rich`. |
 
 ## 🛠️ Installation
 
@@ -445,7 +453,7 @@ python iptv_checker.py
 The program asks how many playlists to check concurrently:
 
 ```text
-Aynı anda kontrol edilecek playlist sayısı (varsayılan 5):
+Aynı anda kontrol edilecek playlist sayısı (varsayılan 20):
 ```
 
 You can also pass input and output paths:
@@ -456,45 +464,34 @@ python iptv_checker.py input.txt sonuclar
 
 ### Live terminal dashboard
 
-When running in a terminal, the screen refreshes every 0.5 seconds. The top section shows progress; the bottom section shows the next 10 addresses:
+When running in a terminal, a Rich-based dashboard refreshes every 0.5 seconds and shows progress, status counters, and the most recent working panels:
 
 ```text
-════════════════════════════════════════════════════════════════════
 📺 IPTV CHECKER
-════════════════════════════════════════════════════════════════════
-📡 Toplam       : 161
-✅ Tamamlanan   : 42  (%26.1)
-⏳ Kalan        : 119
-🔄 Paralel      : 5
-🎯 Şu an        : #43, #44, #45, #46, #47
-⏱️  Geçen süre   : 00:01:24
-🚀 Hız          : 0.50 işlem/sn
-🕒 Tahmini süre : 00:03:58
-[████████████░░░░░░░░░░░░░░░░░░░░] %26.1
-────────────────────────────────────────────────────────────────────
-Sıradaki 10:
-  [   48/161] panel48.example:8080
-  [   49/161] panel49.example:8080
-  [   50/161] panel50.example:8080
-  [   51/161] panel51.example:8080
-  [   52/161] panel52.example:8080
-  [   53/161] panel53.example:8080
-  [   54/161] panel54.example:8080
-  [   55/161] panel55.example:8080
-  [   56/161] panel56.example:8080
-  [   57/161] panel57.example:8080
-────────────────────────────────────────────────────────────────────
+📡 Toplam: 161   ✅ Tamamlanan: 42 (%26.1)   ⏳ Kalan: 119
+🔄 Paralel: 20   🏠 Host limiti: 4           ⏱️  Süre: 00:01:24
+🚀 Hız (ort.): 0.50 işlem/sn  🕒 Tahmini: 00:03:58  🎯 Şu an: #43, #44…
+[██████████░░░░░░░░░░░░░░░░░░░░░░] %26.1
+
+✅ Sağlıklı: 8   ⚠️ Zayıf: 2   ❌ Yayın yok: 5   ⛔ Hatalı: 25   ⏳ Zaman aşımı: 2
+
+Son çalışanlar (10)
+✅ panel-a.example:8080    5/5
+⚠️ panel-b.example:2095    1/5
 ```
 
 It shows:
 
-- Total, completed, and remaining items
-- Percentage and a visual progress bar
-- Current item numbers being processed
+- Total, completed, and remaining items with percentage and progress bar
+- Parallel workers and the per-host concurrency limit
+- Status counters: healthy, weak, no stream, invalid, timed out
+- The last 10 working panels (only `host:port`, never credentials)
 - Elapsed time, processing speed, and estimated time remaining
-- The next 10 addresses (only `host:port`, never credentials)
+- Current item numbers being processed
 
-> If the terminal does not support live screen updates, or output is redirected to a file, the program automatically falls back to line-by-line output.
+> Once the scan reaches 90%, speed and ETA are recalculated from the real rate of the final stretch, so the estimate stays realistic when slow items remain.
+
+> If `rich` is not installed, or output is redirected to a file, the program automatically falls back to line-by-line output.
 
 ## 📂 Project Structure
 
@@ -549,14 +546,25 @@ Rules:
 
 ## 📁 Output Files
 
+Each run writes its own timestamped folder:
+
 ```text
 sonuclar/
-├── saglikli.txt
-├── zayif.txt
-├── yayin_yok.txt
-├── playlist_hatali.txt
-└── ozet.txt
+├── 2026-11-08-23-32/
+│   ├── saglikli.txt
+│   ├── zayif.txt
+│   ├── yayin_yok.txt
+│   ├── playlist_hatali.txt
+│   └── ozet.txt
+├── 2026-11-09-00-15/
+│   └── ...
+└── ...
 ```
+
+- Folder name format: `YYYY-MM-DD-HH-MM`
+- If a second scan starts within the same minute, `_2`, `_3` is appended.
+- Previous run folders are preserved; nothing is overwritten.
+- File names inside the folder are fixed.
 
 Each category file contains:
 
@@ -649,8 +657,11 @@ Edit the constants at the top of `iptv_checker.py`:
 | `MAX_PLAYLIST_BYTES` | `4 MB` | Maximum bytes to read |
 | `SAMPLE_SIZE` | `5` | Streams to check |
 | `MIN_WORKING` | `2` | Working streams required for healthy status |
+| `DEFAULT_PARALLELISM` | `20` | Default parallel workers suggested at the prompt |
+| `HOST_TASK_LIMIT` | `4` | Concurrent task limit per host |
+| `HOST_HTTP_LIMIT` | `6` | Concurrent HTTP connection limit per host |
 
-Parallelism is requested at runtime.
+Parallelism is requested at runtime; the other limits are constants at the top of the script.
 
 ## 🧪 Tests
 
@@ -669,6 +680,8 @@ Coverage:
 - ✅ Panel normalization
 - ✅ Panel record deduplication
 - ✅ Live terminal dashboard
+- ✅ Real-rate ETA after 90%
+- ✅ Timestamped output folders with fixed file names
 - ✅ Duration formatting and host display
 
 ## 🛡️ Security
